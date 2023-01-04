@@ -1,6 +1,6 @@
 # BLUEs
 
-Best Linear Unbiased Estimators. I guess that's why they're called the BLUEs. 
+Best Linear Unbiased Estimators. I guess that's why they call them the BLUEs. 
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ggebbie.github.io/BLUEs.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ggebbie.github.io/BLUEs.jl/dev/)
