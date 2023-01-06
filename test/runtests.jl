@@ -1,24 +1,24 @@
 using Revise, BLUEs
 using Test
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
+const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix
+ENV["UNITFUL_FANCY_EXPONENTS"] = true
+MMatrix = BestMultipliableMatrix
 
 @testset "BLUEs.jl" begin
 
-    const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix
-    ENV["UNITFUL_FANCY_EXPONENTS"] = true
-    MMatrix = BestMultipliableMatrix
-
     @testset "just determined left pseudoinverse" begin
-        M = 2
         N = 2
-        σₓ = rand()
-        # exact = false to work
-        E = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
-        Cnn⁻¹ = Diagonal(fill(σₓ^-1,N),unitdomain(E).^-1,unitdomain(E),exact=true)
-        x = randn(N)m
-        y = E*x
-        x̃ = solve(y,E,Cnn⁻¹)
-        @test x ≈ x̃.v
+        for M in 2:4
+            σₓ = rand()
+            # exact = false to work
+            E = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+            Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E),exact=true)
+            x = randn(N)m
+            y = E*x
+            x̃ = solve(y,E,Cnn⁻¹)
+            @test x ≈ x̃.v
+        end
     end
 
     @testset "trend analysis" begin
@@ -33,13 +33,9 @@ using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 
         E = MMatrix(hcat(ones(M),ustrip.(t)),fill(m,M),[m,m/s],exact=true)
         Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M),exact=true)
-
-        #solve(y,E,Cnn⁻¹=Cnn⁻¹)
-
-
-        # start here
         x̃ = solve(y,E,Cnn⁻¹)
-        E⁺ = (E'*(W⁻¹*E)) \ (E'*W⁻¹)
+        #E⁺ = (E'*(W⁻¹*E)) \ (E'*W⁻¹)
+        #@test x ≈ x̃.v
         
     end
     
