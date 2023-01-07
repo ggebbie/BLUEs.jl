@@ -2,9 +2,9 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 
-export solve, show
+export solve, show, Estimate, cost
 
-import Base: show, getproperty, propertynames
+import Base: show, getproperty, propertynames, (*)
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
@@ -54,5 +54,13 @@ function solve(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix)
     ECE = transpose(E)*CE
     return Estimate( ECE \ (transpose(CE)*y), inv(ECE))
 end
+
+*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
+
+function cost(x̃,y,E,Cnn⁻¹)
+    n = y - E*x̃.v
+    return transpose(n)*(Cnn⁻¹*n)
+end
+
 
 end

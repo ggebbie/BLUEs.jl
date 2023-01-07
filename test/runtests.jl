@@ -7,6 +7,23 @@ MMatrix = BestMultipliableMatrix
 
 @testset "BLUEs.jl" begin
 
+    @testset "error propagation" begin
+
+        a = randn(5) .± rand(5)
+        E = randn(5,5)
+
+        aerr = Measurements.uncertainty.(a);
+        #x = Estimate(Measurements.value.(a),
+        #             aerr*transpose(aerr));
+
+        x = Estimate(Measurements.value.(a),
+                     Diagonal(aerr.^2))
+
+        @test Measurements.value.(E*a) ≈ (E*x).v
+        @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
+
+    end
+
     @testset "just determined left pseudoinverse" begin
         N = 2
         for M in 2:4
@@ -18,6 +35,7 @@ MMatrix = BestMultipliableMatrix
             y = E*x
             x̃ = solve(y,E,Cnn⁻¹)
             @test x ≈ x̃.v
+            @test cost(x̃,y,E,Cnn⁻¹) < 1e-5 # no noise in obs
         end
     end
 
@@ -36,7 +54,9 @@ MMatrix = BestMultipliableMatrix
         x̃ = solve(y,E,Cnn⁻¹)
         #E⁺ = (E'*(W⁻¹*E)) \ (E'*W⁻¹)
         #@test x ≈ x̃.v
-        
+
+        @test cost(x̃,y,E,Cnn⁻¹) < 3M
+
     end
     
 
