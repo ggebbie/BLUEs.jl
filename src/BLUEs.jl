@@ -2,9 +2,12 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 
-export solve, show, Estimate, cost
+export Estimate, OverdeterminedProblem
+export solve, show, cost
 
 import Base: show, getproperty, propertynames, (*)
+
+import LinearAlgebra: pinv
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
@@ -12,6 +15,18 @@ struct Estimate{Tv <: Number,TC <: Number}
     v :: AbstractVector{Tv}
     C :: AbstractMatrix{TC}
 end
+
+struct OverdeterminedProblem
+    y :: AbstractVector
+    E :: AbstractMatrix
+    Cnn⁻¹ :: AbstractMatrix
+    Cxx⁻¹ :: Union{AbstractMatrix,Missing}
+    x₀ :: Union{AbstractVector,Missing}
+end
+
+# constructor for case without prior information
+OverdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
+
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate{<:Number})
     summary(io, x); println(io)
@@ -49,18 +64,60 @@ propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 #Base.propertynames(x::Estimate, private::Bool=false) =
 #    private ? (:U, :U⁻¹, :V, :V⁻¹,  fieldnames(typeof(F))...) : (:U, :U⁻¹, :S, :V, :V⁻¹)
 
-function solve(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix)
-    CE = Cnn⁻¹*E
-    ECE = transpose(E)*CE
-    return Estimate( ECE \ (transpose(CE)*y), inv(ECE))
+"""
+    Solve overdetermined problem
+"""
+function solve(op::OverdeterminedProblem)
+    CE = op.Cnn⁻¹*op.E
+    ECE = transpose(op.E)*CE
+    return Estimate( ECE \ (transpose(CE)*op.y), inv(ECE))
 end
 
+"""
+    function pinv
+
+    Left pseudo-inverse
+"""
+function pinv(op::OverdeterminedProblem)
+    CE = op.Cnn⁻¹*op.E
+    ECE = transpose(op.E)*CE
+    return ECE \ transpose(CE)
+end
+
+"""    
+    Matrix multiplication for Estimate includes
+    error propagation.
+"""
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
 
-function cost(x̃,y,E,Cnn⁻¹)
-    n = y - E*x̃.v
-    return transpose(n)*(Cnn⁻¹*n)
+"""
+    Compute cost function
+"""
+function cost(x̃::Estimate,op::OverdeterminedProblem)
+
+    Jdata = datacost(x̃,op)
+
+    (~ismissing(op.x₀) && ~ismissing(op.Cxx⁻¹)) ? Jcontrol = controlcost(x̃,op) : Jcontrol = nothing
+
+    isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
+
+    return J
 end
 
-
+"""
+    Cost function contribution from observations
+"""
+function datacost( x̃::Estimate, op::OverdeterminedProblem)
+    n = op.y - op.E*x̃.v
+    return transpose(n)*(op.Cnn⁻¹*n)
 end
+
+"""
+    Cost function contribution from control vector
+"""
+function controlcost( x̃::Estimate, op::OverdeterminedProblem)
+    # not implemented yet
+    return nothing
+end
+
+end # module

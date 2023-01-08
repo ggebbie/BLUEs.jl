@@ -33,9 +33,14 @@ MMatrix = BestMultipliableMatrix
             Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E),exact=true)
             x = randn(N)m
             y = E*x
-            x̃ = solve(y,E,Cnn⁻¹)
+
+            problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+            #x̃ = solve(y,E,Cnn⁻¹)
+            x̃ = solve(problem)
             @test x ≈ x̃.v
-            @test cost(x̃,y,E,Cnn⁻¹) < 1e-5 # no noise in obs
+            @test cost(x̃,problem) < 1e-5 # no noise in obs
+
+            @test x ≈ pinv(problem) * y # inefficient way to solve problem
         end
     end
 
@@ -51,11 +56,10 @@ MMatrix = BestMultipliableMatrix
 
         E = MMatrix(hcat(ones(M),ustrip.(t)),fill(m,M),[m,m/s],exact=true)
         Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M),exact=true)
-        x̃ = solve(y,E,Cnn⁻¹)
-        #E⁺ = (E'*(W⁻¹*E)) \ (E'*W⁻¹)
-        #@test x ≈ x̃.v
 
-        @test cost(x̃,y,E,Cnn⁻¹) < 3M
+        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        x̃ = solve(problem)
+        @test cost(x̃,problem) < 3M # rough guide, could get unlucky and not pass
 
     end
     
