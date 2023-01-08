@@ -27,6 +27,16 @@ end
 # constructor for case without prior information
 OverdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
 
+struct UnderdeterminedProblem
+    y :: AbstractVector
+    E :: AbstractMatrix
+    Cnn :: AbstractMatrix
+    Cxx :: Union{AbstractMatrix}
+    x₀ :: Union{AbstractVector,Missing}
+end
+
+# constructor for case without prior information
+UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate{<:Number})
     summary(io, x); println(io)
@@ -70,7 +80,15 @@ propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 function solve(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
-    return Estimate( ECE \ (transpose(CE)*op.y), inv(ECE))
+    if ismissing(op.Cxx⁻¹)  
+        return Estimate( ECE \ (transpose(CE)*op.y), inv(ECE))
+    else
+        # prior information available
+        ECE += op.Cxx⁻¹
+        rhs = transpose(CE)*op.y
+        (~ismissing(op.x₀)) && (rhs += op.Cxx⁻¹*op.x₀)
+        return Estimate( ECE \ rhs, inv(ECE))
+    end
 end
 
 """

@@ -24,7 +24,7 @@ MMatrix = BestMultipliableMatrix
 
     end
 
-    @testset "just determined left pseudoinverse" begin
+    @testset "mixed signals: dimensionless matrix" begin
         N = 2
         for M in 2:4
             σₓ = rand()
@@ -44,7 +44,7 @@ MMatrix = BestMultipliableMatrix
         end
     end
 
-    @testset "trend analysis" begin
+    @testset "trend analysis: left-uniform matrix" begin
 
         M = 10  # number of obs
         t = collect(0:1:M-1)s
@@ -62,6 +62,31 @@ MMatrix = BestMultipliableMatrix
         @test cost(x̃,problem) < 3M # rough guide, could get unlucky and not pass
 
     end
-    
+
+    @testset "left-uniform problem with prior info" begin
+	y = [-1.9permil]
+	σₙ = 0.2permil
+	a = -0.24permil*K^-1
+	γδ = 1.0permil^-2 # to keep units correct, have two γ (tapering) variables
+	γT = 1.0K^-2
+        E = MMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
+        x₀ = [-1.0permil, 4.0K]
+
+        @testset "underdetermined" begin
+	    Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
+        end
+
+        @testset "overdetermined" begin
+            Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K],exact=true)
+	    Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
+            problem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
+            x̃ = solve(problem)
+            @test cost(x̃,problem) < 3M # rough guide, could ge
+        end
+        
+
+
+
+    end
 
 end
