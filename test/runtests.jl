@@ -1,4 +1,4 @@
-using Revise, BLUEs
+using BLUEs
 using Test
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix
