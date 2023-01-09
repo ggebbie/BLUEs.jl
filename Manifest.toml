@@ -2,7 +2,7 @@
 
 julia_version = "1.8.4"
 manifest_format = "2.0"
-project_hash = "8d7f029e4e19404eca1687049fc5c1ee2c5ad999"
+project_hash = "c35455b627cfcb06b7a13a821a296deec5002c89"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -385,7 +385,9 @@ version = "1.12.2"
 
 [[deps.UnitfulLinearAlgebra]]
 deps = ["LinearAlgebra", "Revise", "SparseArrays", "Unitful"]
-path = "/home/gebbie/projects/UnitfulLinearAlgebra/"
+git-tree-sha1 = "9e6c0fec20daad0b3fac60070ced65d0aa7f3c89"
+repo-rev = "main"
+repo-url = "https://github.com/ggebbie/UnitfulLinearAlgebra.jl"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 version = "0.1.0"
 
