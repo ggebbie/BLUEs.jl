@@ -72,21 +72,37 @@ MMatrix = BestMultipliableMatrix
         E = MMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
         x₀ = [-1.0permil, 4.0K]
 
-        @testset "underdetermined" begin
-	    Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
-        end
+        # "overdetermined, problem 1.4" 
+        Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K],exact=true)
+	Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
+        oproblem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
 
-        @testset "overdetermined" begin
-            Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K],exact=true)
-	    Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
-            problem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
-            x̃ = solve(problem)
-            @test cost(x̃,problem) < 3M # rough guide, could ge
-        end
-        
+        # "underdetermined, problem 2.1" 
+	Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
+        Cxx = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1],exact=true)
+        uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
 
+        x̃1 = solve(oproblem)
+        @test cost(x̃1,oproblem) < 1 # rough guide, coul
 
+        x̃2 = solve(uproblem)
+        @test cost(x̃2,uproblem) < 1 # rough guide, could ge
+        # same answer both ways?
+        @test cost(x̃2,uproblem) ≈ cost(x̃1,oproblem)
+    end
+
+    @testset "polynomial fitting, problem 2.3" begin
 
     end
+
+    @testset "overdetermined problem for mean with autocovariance, problem 4.1" begin
+
+    end
+
+    @testset "objective mapping, problem 4.3" begin
+
+    end
+
+    # additional problem: 5.1 model of exponential decay 
 
 end

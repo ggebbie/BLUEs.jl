@@ -2,10 +2,10 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 
-export Estimate, OverdeterminedProblem
-export solve, show, cost
+export Estimate, OverdeterminedProblem, UnderdeterminedProblem
+export solve, show, cost, datacost, controlcost
 
-import Base: show, getproperty, propertynames, (*)
+import Base: show, getproperty, propertynames, (*), (+)
 
 import LinearAlgebra: pinv
 
@@ -94,12 +94,30 @@ end
 """
     function pinv
 
-    Left pseudo-inverse
+    Left pseudo-inverse (i.e., least-squares estimator)
 """
 function pinv(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
     return ECE \ transpose(CE)
+end
+
+"""
+    Solve underdetermined problem
+"""
+function solve(up::UnderdeterminedProblem)
+
+    if ismissing(up.x₀)
+        n = up.y
+    else
+        n = up.y - up.E*up.x₀
+    end
+    Cxy = up.Cxx*transpose(up.E)
+    Cyy = up.E*Cxy + up.Cnn
+    v = Cxy*(Cyy \ n)
+    (~ismissing(up.x₀)) && (v += up.x₀)
+    P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
+    return Estimate(v,P)
 end
 
 """    
@@ -108,34 +126,54 @@ end
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
 
+"""    
+    Matrix addition for Estimate includes
+    error propagation. Follow pp. 95, Sec. 2.5.5,
+    Recursive Least Squares, "Dynamical Insights from Data" class notes
+"""
++(x::Estimate,y::Estimate) = error("not implemented yet")
+
 """
     Compute cost function
 """
 function cost(x̃::Estimate,op::OverdeterminedProblem)
-
     Jdata = datacost(x̃,op)
-
     (~ismissing(op.x₀) && ~ismissing(op.Cxx⁻¹)) ? Jcontrol = controlcost(x̃,op) : Jcontrol = nothing
-
     isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
-
+    return J
+end
+function cost(x̃::Estimate,up::UnderdeterminedProblem)
+    Jdata = datacost(x̃,up)
+    Jcontrol = controlcost(x̃,up) 
+    J = Jdata + Jcontrol
     return J
 end
 
 """
     Cost function contribution from observations
 """
-function datacost( x̃::Estimate, op::OverdeterminedProblem)
-    n = op.y - op.E*x̃.v
-    return transpose(n)*(op.Cnn⁻¹*n)
+function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+    n = p.y - p.E*x̃.v
+    if typeof(p) == UnderdeterminedProblem
+        Cnn⁻¹ = inv(p.Cnn)
+    elseif typeof(p) == OverdeterminedProblem
+        Cnn⁻¹ = p.Cnn⁻¹
+    end
+    return transpose(n)*(Cnn⁻¹*n)
 end
 
 """
     Cost function contribution from control vector
 """
-function controlcost( x̃::Estimate, op::OverdeterminedProblem)
+function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     # not implemented yet
-    return nothing
+    Δx = x̃.v - p.x₀
+    if typeof(p) == UnderdeterminedProblem
+        Cxx⁻¹ = inv(p.Cxx)
+    elseif typeof(p) == OverdeterminedProblem
+        Cxx⁻¹ = p.Cxx⁻¹
+    end
+    return transpose(Δx)*(Cxx⁻¹*Δx)
 end
 
 end # module
