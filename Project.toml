@@ -12,6 +12,9 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [compat]
+ToeplitzMatrices = "0.7"
+Unitful = "1"
+Measurements = "2"
 julia = "1.8"
 
 [extras]
