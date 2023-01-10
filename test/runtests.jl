@@ -1,6 +1,12 @@
 using BLUEs
 using Test
-using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements, ToeplitzMatrices
+using LinearAlgebra
+using Statistics
+using Unitful
+using UnitfulLinearAlgebra
+using Measurements
+using ToeplitzMatrices
+using SparseArrays
 const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 MMatrix = BestMultipliableMatrix
@@ -36,7 +42,8 @@ MMatrix = BestMultipliableMatrix
 
             problem = OverdeterminedProblem(y,E,Cnn⁻¹)
             #x̃ = solve(y,E,Cnn⁻¹)
-            x̃ = solve(problem)
+            x̃ = solve(problem,alg=:hessian)
+            x̃ = solve(problem,alg=:textbook)
             @test x ≈ x̃.v
             @test cost(x̃,problem) < 1e-5 # no noise in obs
 
@@ -58,7 +65,8 @@ MMatrix = BestMultipliableMatrix
         Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M),exact=true)
 
         problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-        x̃ = solve(problem)
+        x̃ = solve(problem,alg=:textbook)
+        x̃1 = solve(problem,alg=:hessian)
         @test cost(x̃,problem) < 3M # rough guide, could get unlucky and not pass
 
     end
@@ -119,7 +127,8 @@ MMatrix = BestMultipliableMatrix
         oproblem = OverdeterminedProblem(y,E,Cₙₙ⁻¹,Cxx⁻¹,x₀)
 
         # not perfect data fit b.c. of prior info
-        x̃ = solve(oproblem)
+        x̃ = solve(oproblem,alg=:hessian)
+        x̃ = solve(oproblem,alg=:textbook)
         @test cost(x̃,oproblem) < 3M
     end
 
@@ -128,7 +137,6 @@ MMatrix = BestMultipliableMatrix
     end
 
     @testset "objective mapping, problem 4.3" begin
-
         
         yr = u"yr"; cm = u"cm"
         τ = range(0.0yr,5.0yr,step=0.1yr)
@@ -140,8 +148,8 @@ MMatrix = BestMultipliableMatrix
         σₙ = 0.1cm
         Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M),exact=true)
 
-        Enum = sparse(1:M,1:5:n,fill(1.0,M))
-        E = MMatrix(Enum,fill(cm,M),fill(cm,n),exact=true)
+        Enm = sparse(1:M,1:5:n,fill(1.0,M))
+        E = MMatrix(Enm,fill(cm,M),fill(cm,n),exact=true)
 
         Cxx¹² = cholesky(Cxx)
         x₀ = zeros(n)cm
@@ -152,7 +160,6 @@ MMatrix = BestMultipliableMatrix
 
         x̃ = solve(uproblem)
         @test cost(x̃,uproblem) < 3M 
-        
 
     end
 

@@ -76,8 +76,18 @@ propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 
 """
     Solve overdetermined problem
+
+    optional alg= :textbook or :hessian
 """
-function solve(op::OverdeterminedProblem)
+function solve(op::OverdeterminedProblem; alg=:textbook)
+    if alg == :textbook
+        solve_textbook(op)
+    else
+        alg == :hessian
+        solve_hessian(op)
+    end
+end
+function solve_textbook(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
     if ismissing(op.Cxx⁻¹)  
@@ -88,6 +98,31 @@ function solve(op::OverdeterminedProblem)
         rhs = transpose(CE)*op.y
         (~ismissing(op.x₀)) && (rhs += op.Cxx⁻¹*op.x₀)
         return Estimate( ECE \ rhs, inv(ECE))
+    end
+end
+function solve_hessian(op::OverdeterminedProblem)
+    if ismissing(op.x₀)
+        n = op.y 
+    else
+        n = op.y - op.E*op.x₀
+    end
+    #∂J∂n = (op.Cnn⁻¹*n)
+    ∂J∂n = 2 .*(op.Cnn⁻¹*n) # issue with "2"
+    ∂J∂x = -(transpose(op.E)*∂J∂n) # annoying
+
+    H⁻¹ = inv(hessian(op))
+    x = -(1//2)*H⁻¹*∂J∂x
+    (~ismissing(op.x₀)) && (x += op.x₀)
+    return Estimate( x, H⁻¹)
+end
+
+#parse error
+#hessian(op::OverdeterminedProblem) = ismissing(op.Cxx⁻¹) ? return transpose(op.E)*(op.Cnn⁻¹*op.E) : return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
+function hessian(op::OverdeterminedProblem)
+    if ismissing(op.Cxx⁻¹)
+        return transpose(op.E)*(op.Cnn⁻¹*op.E)
+    else
+        return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
     end
 end
 
