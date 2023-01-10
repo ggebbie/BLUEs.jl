@@ -17,15 +17,15 @@ struct Estimate{Tv <: Number,TC <: Number}
 end
 
 struct OverdeterminedProblem
-    y :: AbstractVector
-    E :: AbstractMatrix
-    Cnn⁻¹ :: AbstractMatrix
-    Cxx⁻¹ :: Union{AbstractMatrix,Missing}
-    x₀ :: Union{AbstractVector,Missing}
+    y :: Union{<: AbstractVector,NamedTuple}
+    E :: Union{<: AbstractMatrix, NamedTuple}
+    Cnn⁻¹ :: Union{<: AbstractMatrix, NamedTuple}
+    Cxx⁻¹ :: Union{<: AbstractMatrix, Missing}
+    x₀ :: Union{<: AbstractVector, Missing}
 end
 
 # constructor for case without prior information
-OverdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
+OverdeterminedProblem(y::Union{<: AbstractVector,NamedTuple},E::Union{<: AbstractMatrix,NamedTuple},Cnn⁻¹::Union{<:Matrix,NamedTuple}) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
 
 struct UnderdeterminedProblem
     y :: AbstractVector
@@ -107,7 +107,7 @@ function solve_hessian(op::OverdeterminedProblem)
         n = op.y - op.E*op.x₀
     end
     #∂J∂n = (op.Cnn⁻¹*n)
-    ∂J∂n = 2 .*(op.Cnn⁻¹*n) # issue with "2"
+    ∂J∂n = 2 *(op.Cnn⁻¹*n) # issue with "2"
     ∂J∂x = -(transpose(op.E)*∂J∂n) # annoying
 
     H⁻¹ = inv(hessian(op))
@@ -209,6 +209,29 @@ function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,Underdetermi
         Cxx⁻¹ = p.Cxx⁻¹
     end
     return transpose(Δx)*(Cxx⁻¹*Δx)
+end
+
+#Matrix multiply, Mx
+"""
+    mul
+"""
+function *(A::NamedTuple, b::Vector) 
+    # Update to use parametric type to set type of Vector
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = V*b 
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function *(A::NamedTuple, b::NamedTuple)
+    ~(keys(A) == keys(b)) && error("named tuples don't have consistent fields")
+    
+    # Update to use parametric type to set type of Vector
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = V*b[i] # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
 end
 
 end # module

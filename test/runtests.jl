@@ -1,3 +1,4 @@
+using Revise
 using BLUEs
 using Test
 using LinearAlgebra
@@ -164,5 +165,32 @@ MMatrix = BestMultipliableMatrix
     end
 
     # additional problem: 5.1 model of exponential decay 
+    @testset "overdetermined named tuple E,y" begin
+        N = 2
+        M = 2
+        σₓ = rand()
+        # exact = false to work
+        E1 = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+        E2 = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+        E = (one=E1,two=E2)
+
+        Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1),exact=true)
+
+        Cnn⁻¹ = (one=Cnn⁻¹1, two =Cnn⁻¹1)
+        x = randn(N)m
+
+        # create perfect data
+        y = E*x
+
+        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+
+        #x̃ = solve(y,E,Cnn⁻¹)
+        x̃ = solve(problem,alg=:hessian)
+        
+        @test x ≈ x̃.v
+        @test cost(x̃,problem) < 1e-5 # no noise in obs
+
+        @test x ≈ pinv(problem) * y # inefficient way to solve problem
+end
 
 end
