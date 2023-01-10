@@ -5,9 +5,9 @@ using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
 
-import Base: show, getproperty, propertynames, (*), (+)
+import Base: show, getproperty, propertynames, (*), (+), (-)
 
-import LinearAlgebra: pinv
+import LinearAlgebra: pinv, transpose
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
@@ -17,15 +17,15 @@ struct Estimate{Tv <: Number,TC <: Number}
 end
 
 struct OverdeterminedProblem
-    y :: AbstractVector
-    E :: AbstractMatrix
-    Cnn⁻¹ :: AbstractMatrix
-    Cxx⁻¹ :: Union{AbstractMatrix,Missing}
-    x₀ :: Union{AbstractVector,Missing}
+    y :: Union{<: AbstractVector,NamedTuple}
+    E :: Union{<: AbstractMatrix, NamedTuple}
+    Cnn⁻¹ :: Union{<: AbstractMatrix, NamedTuple}
+    Cxx⁻¹ :: Union{<: AbstractMatrix, Missing}
+    x₀ :: Union{<: AbstractVector, Missing}
 end
 
 # constructor for case without prior information
-OverdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn⁻¹::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
+OverdeterminedProblem(y::Union{<: AbstractVector,NamedTuple},E::Union{<: AbstractMatrix,NamedTuple},Cnn⁻¹::Union{<:AbstractMatrix,NamedTuple}) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
 
 struct UnderdeterminedProblem
     y :: AbstractVector
@@ -70,14 +70,24 @@ end
 
 propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 
-# Code to make some property names private
+# Template code to make some property names private
 #Base.propertynames(x::Estimate, private::Bool=false) =
 #    private ? (:U, :U⁻¹, :V, :V⁻¹,  fieldnames(typeof(F))...) : (:U, :U⁻¹, :S, :V, :V⁻¹)
 
 """
     Solve overdetermined problem
+
+    optional alg= :textbook or :hessian
 """
-function solve(op::OverdeterminedProblem)
+function solve(op::OverdeterminedProblem; alg=:textbook)
+    if alg == :textbook
+        return solve_textbook(op)
+    else
+        alg == :hessian
+        return solve_hessian(op)
+    end
+end
+function solve_textbook(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
     if ismissing(op.Cxx⁻¹)  
@@ -90,7 +100,50 @@ function solve(op::OverdeterminedProblem)
         return Estimate( ECE \ rhs, inv(ECE))
     end
 end
+function solve_hessian(op::OverdeterminedProblem)
+    ∂J∂x = gradient(op)
+    H⁻¹ = inv(hessian(op))
+    x = -(1//2)*H⁻¹*∂J∂x
+    (~ismissing(op.x₀)) && (x += op.x₀)
+    return Estimate( x, H⁻¹)
+end
+function misfitgradient(op::OverdeterminedProblem)
+    if ismissing(op.x₀)
+        n = op.y 
+    else
+        n = op.y - op.E*op.x₀
+    end
+    return 2 *(op.Cnn⁻¹*n)
+end
+function gradient(op::OverdeterminedProblem)
+    ∂J∂n = misfitgradient(op)
+    if typeof(op.E) <: NamedTuple
+        return -sum(transpose(op.E)*∂J∂n)
+    else
+        return -(transpose(op.E)*∂J∂n) # annoying
+    end
+ end
 
+#parse error
+#hessian(op::OverdeterminedProblem) = ismissing(op.Cxx⁻¹) ? return transpose(op.E)*(op.Cnn⁻¹*op.E) : return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
+function hessian(op::OverdeterminedProblem)
+    if ismissing(op.Cxx⁻¹)
+        #return transpose(op.E)*(op.Cnn⁻¹*op.E)
+        return symmetric_innerproduct(op.E,op.Cnn⁻¹)
+    else
+        return symmetric_innerproduct(op.E,op.Cnn⁻¹) + op.Cxx⁻¹
+        #return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
+    end
+end
+
+symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
+symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix},Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+"""
+    for NamedTuple, add up each Hessian contribution
+"""
+symmetric_innerproduct(E::NamedTuple) = sum(transpose(E)*E)
+symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(Cnn⁻¹*E))
+                                                    
 """
     function pinv
 
@@ -143,10 +196,10 @@ function cost(x̃::Estimate,op::OverdeterminedProblem)
     return J
 end
 function cost(x̃::Estimate,up::UnderdeterminedProblem)
-    Jdata = datacost(x̃,up)
-    Jcontrol = controlcost(x̃,up) 
-    J = Jdata + Jcontrol
-    return J
+   Jdata = datacost(x̃,up)
+   Jcontrol = controlcost(x̃,up) 
+   J = Jdata + Jcontrol
+   return J
 end
 
 """
@@ -155,11 +208,11 @@ end
 function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
-        Cnn⁻¹ = inv(p.Cnn)
+        Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
         Cnn⁻¹ = p.Cnn⁻¹
     end
-    return transpose(n)*(Cnn⁻¹*n)
+    return symmetric_innerproduct(n,Cnn⁻¹)
 end
 
 """
@@ -169,11 +222,93 @@ function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,Underdetermi
     # not implemented yet
     Δx = x̃.v - p.x₀
     if typeof(p) == UnderdeterminedProblem
-        Cxx⁻¹ = inv(p.Cxx)
+        Cxx⁻¹ = inv(p.Cxx) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
         Cxx⁻¹ = p.Cxx⁻¹
     end
-    return transpose(Δx)*(Cxx⁻¹*Δx)
+    #return transpose(Δx)*(Cxx⁻¹*Δx)
+    return symmetric_innerproduct(Δx,Cxx⁻¹)
+end
+
+#Matrix multiply, Mx
+"""
+    multiplication for `NamedTuple`s
+"""
+function *(A::NamedTuple, b::Vector) 
+    # Update to use parametric type to set type of Vector
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = V*b 
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function *(A::NamedTuple, b::NamedTuple)
+    ~(keys(A) == keys(b)) && error("named tuples don't have consistent fields")
+    
+    # Update to use parametric type to set type of Vector
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = V*b[i] # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function *(b::T,A::NamedTuple) where T<:Number
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    #c = similar(A)
+    for (i, V) in enumerate(A)
+        c[i] = V*b # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function -(A::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = -V # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function -(A::NamedTuple,B::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = A[i]-B[i] # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function +(A::NamedTuple,B::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = A[i]+B[i] # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function sum(A::NamedTuple) 
+    # Update to use parametric type to initialize output
+    Asum = 0 * A[1] # a kludge
+    for (i, V) in enumerate(A)
+        Asum += V 
+    end
+    return Asum
+end
+function transpose(A::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = transpose(V) # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
 end
 
 end # module

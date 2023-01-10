@@ -2,7 +2,7 @@
 
 julia_version = "1.8.4"
 manifest_format = "2.0"
-project_hash = "c35455b627cfcb06b7a13a821a296deec5002c89"
+project_hash = "96fa16950295866adf67f8e74f7299406472483f"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
