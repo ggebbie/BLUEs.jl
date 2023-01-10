@@ -188,7 +188,7 @@ MMatrix = BestMultipliableMatrix
         x̃ = solve(problem,alg=:hessian)
         
         @test x ≈ x̃.v # no noise in obs
-        #@test cost(x̃,problem) < 1e-5 # no noise in obs
+        @test cost(x̃,problem) < 1e-5 # no noise in obs
 
         #@test x ≈ pinv(problem) * y # inefficient way to solve problem
 

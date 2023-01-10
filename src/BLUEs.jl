@@ -136,8 +136,8 @@ function hessian(op::OverdeterminedProblem)
     end
 end
 
-symmetric_innerproduct(E::AbstractMatrix) = transpose(E)*E
-symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
+symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix},Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
 """
     for NamedTuple, add up each Hessian contribution
 """
@@ -196,10 +196,10 @@ function cost(x̃::Estimate,op::OverdeterminedProblem)
     return J
 end
 function cost(x̃::Estimate,up::UnderdeterminedProblem)
-    Jdata = datacost(x̃,up)
-    Jcontrol = controlcost(x̃,up) 
-    J = Jdata + Jcontrol
-    return J
+   Jdata = datacost(x̃,up)
+   Jcontrol = controlcost(x̃,up) 
+   J = Jdata + Jcontrol
+   return J
 end
 
 """
@@ -208,11 +208,11 @@ end
 function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
-        Cnn⁻¹ = inv(p.Cnn)
+        Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
         Cnn⁻¹ = p.Cnn⁻¹
     end
-    return transpose(n)*(Cnn⁻¹*n)
+    return symmetric_innerproduct(n,Cnn⁻¹)
 end
 
 """
@@ -222,11 +222,12 @@ function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,Underdetermi
     # not implemented yet
     Δx = x̃.v - p.x₀
     if typeof(p) == UnderdeterminedProblem
-        Cxx⁻¹ = inv(p.Cxx)
+        Cxx⁻¹ = inv(p.Cxx) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
         Cxx⁻¹ = p.Cxx⁻¹
     end
-    return transpose(Δx)*(Cxx⁻¹*Δx)
+    #return transpose(Δx)*(Cxx⁻¹*Δx)
+    return symmetric_innerproduct(Δx,Cxx⁻¹)
 end
 
 #Matrix multiply, Mx
@@ -269,6 +270,26 @@ function -(A::NamedTuple)
     c = Vector(undef, length(A))
     for (i, V) in enumerate(A)
         c[i] = -V # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function -(A::NamedTuple,B::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = A[i]-B[i] # b index safe?
+    end
+    return NamedTuple{keys(A)}(c)
+end
+function +(A::NamedTuple,B::NamedTuple) 
+    
+    # Update to use parametric type to set type of Vector
+    # Overwriting A would be more efficient
+    c = Vector(undef, length(A))
+    for (i, V) in enumerate(A)
+        c[i] = A[i]+B[i] # b index safe?
     end
     return NamedTuple{keys(A)}(c)
 end
