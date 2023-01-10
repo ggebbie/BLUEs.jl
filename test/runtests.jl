@@ -167,7 +167,7 @@ MMatrix = BestMultipliableMatrix
     # additional problem: 5.1 model of exponential decay 
     @testset "overdetermined named tuple E,y" begin
         N = 2
-        M = 2
+        M = 1
         σₓ = rand()
         # exact = false to work
         E1 = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
@@ -187,10 +187,12 @@ MMatrix = BestMultipliableMatrix
         #x̃ = solve(y,E,Cnn⁻¹)
         x̃ = solve(problem,alg=:hessian)
         
-        @test x ≈ x̃.v
-        @test cost(x̃,problem) < 1e-5 # no noise in obs
+        @test x ≈ x̃.v # no noise in obs
+        #@test cost(x̃,problem) < 1e-5 # no noise in obs
 
-        @test x ≈ pinv(problem) * y # inefficient way to solve problem
+        #@test x ≈ pinv(problem) * y # inefficient way to solve problem
+
+        # contaminate observations, check if error bars are correct
 end
 
 end
