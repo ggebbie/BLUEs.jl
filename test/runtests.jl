@@ -8,7 +8,7 @@ using UnitfulLinearAlgebra
 using Measurements
 using ToeplitzMatrices
 using SparseArrays
-const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix
+const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 MMatrix = BestMultipliableMatrix
 
