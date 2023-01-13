@@ -11,11 +11,27 @@ import LinearAlgebra: pinv, transpose
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
+"""
+    struct Estimate
+    
+    a structure with some vector of values v and associated covariance matrix C 
+"""
 struct Estimate{Tv <: Number,TC <: Number} 
     v :: AbstractVector{Tv}
     C :: AbstractMatrix{TC}
 end
 
+"""
+    struct OverdeterminedProblem
+
+    a structure (NamedTuple version) with fields
+
+    - `y::Union{<: AbstractVector,NamedTuple}`: "observations", namedtuples of vectors
+    - `E :: Union{<: AbstractMatrix, NamedTuple}`: model matrices 
+    - `Cnn⁻¹ :: Union{<: AbstractMatrix, NamedTuple}`: namedtuple of inverse noise covariance matrix
+    - `Cxx⁻¹ :: Union{<: AbstractMatrix, Missing}`: tapering matrices, NOT namedtuples 
+    - `x₀ :: Union{<: AbstractVector, Missing}`: first guess vector
+"""
 struct OverdeterminedProblem
     y :: Union{<: AbstractVector,NamedTuple}
     E :: Union{<: AbstractMatrix, NamedTuple}
@@ -24,9 +40,25 @@ struct OverdeterminedProblem
     x₀ :: Union{<: AbstractVector, Missing}
 end
 
-# constructor for case without prior information
+"""
+    function OverdeterminedProblem
+
+    generates OverdeterminedProblem structure with x₀ = missing, Cxx = missing 
+"""
 OverdeterminedProblem(y::Union{<: AbstractVector,NamedTuple},E::Union{<: AbstractMatrix,NamedTuple},Cnn⁻¹::Union{<:AbstractMatrix,NamedTuple}) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
 
+
+"""
+    struct UnderdeterminedProblem
+
+    a structure with fields
+
+    - `y::AbstractVector`: vector of "observations"
+    - `E::AbstractMatrix`: model matrix 
+    - `Cnn::AbstractMatrix`: noise covariance matrix 
+    - `Cxx::Union{AbstractMatrix}`: tapering matrix 
+    - `x₀::Union{AbstractVector, Missing}`: first guess vector
+"""
 struct UnderdeterminedProblem
     y :: AbstractVector
     E :: AbstractMatrix
@@ -35,8 +67,14 @@ struct UnderdeterminedProblem
     x₀ :: Union{AbstractVector,Missing}
 end
 
-# constructor for case without prior information
+
+"""
+    function UnderdeterminedProblem
+
+    generates UnderdeterminedProblem structure with x₀ = missing, still requires Cxx 
+"""
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
+
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate{<:Number})
     summary(io, x); println(io)
@@ -75,9 +113,11 @@ propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 #    private ? (:U, :U⁻¹, :V, :V⁻¹,  fieldnames(typeof(F))...) : (:U, :U⁻¹, :S, :V, :V⁻¹)
 
 """
-    Solve overdetermined problem
+    function solve
 
-    optional alg= :textbook or :hessian
+        Solve overdetermined problem
+
+        optional alg= :textbook or :hessian
 """
 function solve(op::OverdeterminedProblem; alg=:textbook)
     if alg == :textbook
@@ -202,7 +242,9 @@ function pinv(op::OverdeterminedProblem)
 end
 
 """
-    Solve underdetermined problem
+    function solve
+
+        Solve underdetermined problem
 """
 function solve(up::UnderdeterminedProblem)
 
