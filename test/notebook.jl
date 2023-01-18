@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.19
+# v0.19.16
 
 using Markdown
 using InteractiveUtils
@@ -32,6 +32,7 @@ begin
 	using Random
 	using InteractiveUtils
 	using PlutoUI
+	using Pluto
 end
 
 
@@ -44,18 +45,6 @@ md"""
 	const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix;
 
 # ╔═╡ 72b37fc1-21fa-400c-bb3a-dec1730a9c35
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-end
-
-
-# ╔═╡ d4d8d9b3-30c0-4eab-a7bb-37ae62423546
 
 
 # ╔═╡ f862f30e-ea14-41a1-93ee-63d92380cd8d
@@ -181,18 +170,19 @@ let
 	
 	        @show y = a .+ b.*t .+ randn(numobs)m
 	
-	        @show E = MMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
-	        @show Cnn⁻¹ = Diagonal(fill(1.0,numobs),fill(m^-1,numo	σₙ = 0.2permil
-		a = -0.24permil*K^-1
-		γδ = 1.0permil^-2 # to keep units correct, have two γ (tapering) variables
-		γT = 1.0K^-2bs),fill(m,numobs),exact=true)
+	        E = MMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
+			println()
+			display(E)
+			println()
+	        Cnn⁻¹ = Diagonal(fill(1.0,numobs),fill(m^-1,numobs),fill(m,numobs),exact=true)
+			display(Cnn⁻¹)
 	
 	        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
 	        @show x̃ = solve(problem,alg=:textbook)
 	        x̃1 = solve(problem,alg=:hessian) #solutions will be identical 
 	        @show cost(x̃,problem) < 3numobs; # rough guide, could get unlucky and not pass
-		scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
-		plot!(t, (E*x̃).v, ribbon = (E*x̃).σ, label = "ỹ(t)")
+			scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
+			plot!(t, (E*x̃).v, ribbon = (E*x̃).σ, label = "ỹ(t)")
 		
 	end
 end
@@ -203,7 +193,7 @@ md"""
 ## Example 4: left-uniform problem with prior info
 If we have one observation of $\delta^{18}\mathrm{O}_{\text{calcite}} = (-1.9 \pm 0.2)‰$, and we want to obtain values of $\delta^{18}\mathrm{O}_{\text{water}}, T$ from it, we can use the following relation 
 
-$$\delta^{18}\mathrm{O}_{\text{calcite}} = -0.24 ‰/K T +  \delta^{18}\mathrm{O}_{\text{water}}$$
+$$\delta^{18}\mathrm{O}_{\text{calcite}} = -0.24 [\text{‰/K}] T +  \delta^{18}\mathrm{O}_{\text{water}}$$
 
 (above equation is rough estimate, and assumes we've already subtracted off the calcite-water $\delta^{18}\mathrm{O}$ offset)
 
@@ -441,8 +431,7 @@ end
 # ╟─1aa4af78-f0ee-4d5a-916b-c6e0decdd300
 # ╠═1ccfc590-90f7-11ed-1e7c-dfaec0816597
 # ╠═970a7544-c5f2-4f2e-ba52-316f67554482
-# ╟─72b37fc1-21fa-400c-bb3a-dec1730a9c35
-# ╠═d4d8d9b3-30c0-4eab-a7bb-37ae62423546
+# ╠═72b37fc1-21fa-400c-bb3a-dec1730a9c35
 # ╠═f862f30e-ea14-41a1-93ee-63d92380cd8d
 # ╠═7dd4252c-f2d0-4839-9052-981b86e83804
 # ╠═6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
