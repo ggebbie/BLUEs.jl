@@ -100,7 +100,12 @@ function getproperty(x::Estimate, d::Symbol)
         return .√diag(x.C)
     elseif d === :x
         # x.v can be a UnitfulVector, so wrap with Matrix
-        return measurement.(Matrix(x.v),x.σ)
+        if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
+            v = Matrix(x.v)
+        else
+            v = x.v
+        end
+        return measurement.(v,x.σ)
         #return x.v .± x.σ
     else
         return getfield(x, d)
