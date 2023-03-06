@@ -4,6 +4,7 @@ authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
 version = "0.1.0"
 
 [deps]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
