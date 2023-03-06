@@ -99,7 +99,8 @@ function getproperty(x::Estimate, d::Symbol)
     if d === :σ
         return .√diag(x.C)
     elseif d === :x
-        return measurement.(x.v,x.σ)
+        # x.v can be a UnitfulVector, so wrap with Matrix
+        return measurement.(Matrix(x.v),x.σ)
         #return x.v .± x.σ
     else
         return getfield(x, d)
@@ -224,6 +225,9 @@ end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix},Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+# UnitfulLinearAlgebra returns UnitfulMatrix type, convert to scalar
+#symmetric_innerproduct(E::AbstractUnitfulMatrix) = Matrix(transpose(E)*E)
+#symmetric_innerproduct(E::AbstractUnitfulMatrix,Cnn⁻¹::AbstractUnitfulMatrix) = Matrix(transpose(E)*(Cnn⁻¹*E))
 """
     for NamedTuple, add up each Hessian contribution
 """
@@ -322,7 +326,7 @@ end
 """
     multiplication for `NamedTuple`s
 """
-function *(A::NamedTuple, b::Vector) 
+function *(A::NamedTuple, b::AbstractVector) 
     # Update to use parametric type to set type of Vector
     c = Vector(undef, length(A))
     for (i, V) in enumerate(A)
