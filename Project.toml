@@ -20,6 +20,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [compat]
+DimensionalData = "0.24"
 Measurements = "2"
 Plots = "1"
 Pluto = "0.19"
