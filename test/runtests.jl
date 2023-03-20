@@ -11,6 +11,51 @@ using SparseArrays
 const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
+"""
+    Are two matrices within a certain tolerance?
+    Use to simplify tests.
+    """
+within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
+within(A::UnitfulLinearAlgebra.AbstractUnitfulType,B::UnitfulLinearAlgebra.AbstractUnitfulType,tol) =  maximum(abs.(parent(A - B))) < tol
+
+"""
+    function random_source_water_matrix_vector_pair(M,N)
+
+    M: number of interior locations, observations
+    N=3: number of surface regions (fixed), solution or state
+
+    return E,x
+"""
+function random_source_water_matrix_vector_pair(M)
+
+    #using DimensionalData
+    #using DimensionalData: @dim
+    #cm = u"cm"
+    yr = u"yr"
+    K = u"K"
+    percent = u"percent"
+    surfaceregions = [:NATL,:ANT,:SUBANT]
+    interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:M]
+    N = length(surfaceregions)
+    
+    # observations have units of temperature
+    urange = fill(K,M)
+    # solution also has units of temperature
+    udomain = fill(K,N)
+    Eparent = rand(M,N)#*100percent
+
+    # normalize to conserve mass
+    for nrow = 1:size(Eparent,1)
+        Eparent[nrow,:] ./= sum(Eparent[nrow,:])
+    end
+    
+    E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
+
+    x = UnitfulDimMatrix(randn(N),fill(K,N),dims=(SurfaceRegion(surfaceregions)))
+    return E,x
+end
+
+
 @testset "BLUEs.jl" begin
 
     @testset "error propagation" begin
@@ -177,7 +222,7 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1).^1,exact=true)
 
         Cnn⁻¹ = (one=Cnn⁻¹1, two =Cnn⁻¹1)
-        x = UnitfulMatrix(randn(N)m) # Doesn't yet work with UnitfulMatrix
+        x = UnitfulMatrix(randn(N)m) 
 
         # create perfect data
         y = E*x
@@ -193,6 +238,31 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
         #@test x ≈ pinv(problem) * y # inefficient way to solve problem
 
         # contaminate observations, check if error bars are correct
-end
+    end
+
+    @testset "source water inversion: obs at one time, no circulation lag" begin
+
+        using DimensionalData
+        using DimensionalData: @dim
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+
+        E,x = random_source_water_matrix_vector_pair(M)
+
+        # Run model to predict interior location temperature
+        #y = uconvert.(K,E*x)
+        y = E*x
+
+        # do slices work?
+        E[At(:loc1),At(:NATL)]
+        E[:,At(:ANT)]
+
+        # invert for x.  
+        x̃ = E\y
+
+        @test within(x̃,x,1.0e-5)
+    end
+
 
 end
