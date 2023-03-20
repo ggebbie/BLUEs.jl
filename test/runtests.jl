@@ -8,6 +8,8 @@ using UnitfulLinearAlgebra
 using Measurements
 using ToeplitzMatrices
 using SparseArrays
+using DimensionalData
+using DimensionalData:@dim
 const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
@@ -70,15 +72,17 @@ function random_source_water_matrix_vector_pair_with_lag(M)
     #cm = u"cm"
     yr = u"yr"
     K = u"K"
-    percent = u"percent"
+    #percent = u"percent"
     surfaceregions = [:NATL,:ANT,:SUBANT]
     lags = (0:(M-1))yr
     years = (1990:2000)yr
 
+    Myears = length(years)
     N = length(surfaceregions)
     
     # observations have units of temperature
-    urange = fill(K,M)
+    urange1 = fill(K,M)
+    urange2 = fill(K,Myears)
     # solution also has units of temperature
     udomain = fill(K,N)
     Eparent = rand(M,N)#*100percent
@@ -88,8 +92,8 @@ function random_source_water_matrix_vector_pair_with_lag(M)
         Eparent /= sum(Eparent)
     end
     
-    E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
-    x = UnitfulDimMatrix(randn(M,N),urange,fill(unit(1.0),N),dims=(Ti(years),SurfaceRegion(surfaceregions)))
+    E = UnitfulDimMatrix(ustrip.(Eparent),urange1,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
+    x = UnitfulDimMatrix(randn(Myears,N),urange2,fill(unit(1.0),N),dims=(Ti(years),SurfaceRegion(surfaceregions)))
     return E,x
 end
 
@@ -297,6 +301,7 @@ end
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
 
+        M = 5
         E,x = random_source_water_matrix_vector_pair(M)
 
         # Run model to predict interior location temperature
@@ -315,12 +320,13 @@ end
 
     @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
 
-        using DimensionalData
-        using DimensionalData: @dim
+        #using DimensionalData
+        #using DimensionalData: @dim
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
 
+        M = 5
         E,x = random_source_water_matrix_vector_pair_with_lag(M)
 
         # Run model to predict interior location temperature
