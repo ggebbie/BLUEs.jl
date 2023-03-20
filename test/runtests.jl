@@ -19,7 +19,7 @@ within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
 within(A::UnitfulLinearAlgebra.AbstractUnitfulType,B::UnitfulLinearAlgebra.AbstractUnitfulType,tol) =  maximum(abs.(parent(A - B))) < tol
 
 """
-    function random_source_water_matrix_vector_pair(M,N)
+    function random_source_water_matrix_vector_pair(M)
 
     M: number of interior locations, observations
     N=3: number of surface regions (fixed), solution or state
@@ -52,6 +52,44 @@ function random_source_water_matrix_vector_pair(M)
     E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
 
     x = UnitfulDimMatrix(randn(N),fill(K,N),dims=(SurfaceRegion(surfaceregions)))
+    return E,x
+end
+
+"""
+    function random_source_water_matrix_vector_pair_with_lag(M)
+
+    M: number of interior locations, observations
+    N=3: number of surface regions (fixed), solution or state
+
+    return E,x
+"""
+function random_source_water_matrix_vector_pair_with_lag(M)
+
+    #using DimensionalData
+    #using DimensionalData: @dim
+    #cm = u"cm"
+    yr = u"yr"
+    K = u"K"
+    percent = u"percent"
+    surfaceregions = [:NATL,:ANT,:SUBANT]
+    lags = (0:(M-1))yr
+    years = (1990:2000)yr
+
+    N = length(surfaceregions)
+    
+    # observations have units of temperature
+    urange = fill(K,M)
+    # solution also has units of temperature
+    udomain = fill(K,N)
+    Eparent = rand(M,N)#*100percent
+
+    # normalize to conserve mass
+    for nrow = 1:size(Eparent,1)
+        Eparent /= sum(Eparent)
+    end
+    
+    E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
+    x = UnitfulDimMatrix(randn(M,N),urange,udomain,dims=(Ti(years),SurfaceRegion(surfaceregions)))
     return E,x
 end
 
@@ -264,5 +302,47 @@ end
         @test within(x̃,x,1.0e-5)
     end
 
+    @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
+
+        using DimensionalData
+        using DimensionalData: @dim
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+
+        E,x = random_source_water_matrix_vector_pair_with_lag(M)
+
+        x[:,At(:NATL)]
+
+        # convolve E and x
+        # run through all lags
+        tnow = 2000yr
+        for (ii,ll) = enumerate(lags)
+
+            # what time at surface
+            tsfc = tnow - ll
+            E[ii,:] * x[Near(tsfc),:]
+            
+
+            
+            #println(ll)
+        end
+        
+
+        # Run model to predict interior location temperature
+        #y = uconvert.(K,E*x)
+        y = E*x
+
+        # do slices work?
+        E[At(:loc1),At(:NATL)]
+        E[:,At(:ANT)]
+
+        # invert for x.  
+        x̃ = E\y
+
+        @test within(x̃,x,1.0e-5)
+    end
+
 
 end
+
