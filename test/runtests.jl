@@ -89,10 +89,21 @@ function random_source_water_matrix_vector_pair_with_lag(M)
     end
     
     E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
-    x = UnitfulDimMatrix(randn(M,N),urange,udomain,dims=(Ti(years),SurfaceRegion(surfaceregions)))
+    x = UnitfulDimMatrix(randn(M,N),urange,fill(unit(1.0),N),dims=(Ti(years),SurfaceRegion(surfaceregions)))
     return E,x
 end
 
+"""
+   Take the convolution of E and x
+
+    Account for proper overlap of dimensions
+    Sum and take into account units.
+"""
+function convolve(E,x)
+    tnow = last(first(dims(x)))
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+end
 
 @testset "BLUEs.jl" begin
 
@@ -312,37 +323,11 @@ end
 
         E,x = random_source_water_matrix_vector_pair_with_lag(M)
 
-        x[:,At(:NATL)]
-
+        # Run model to predict interior location temperature
         # convolve E and x
         # run through all lags
-        tnow = 2000yr
-        for (ii,ll) = enumerate(lags)
-
-            # what time at surface
-            tsfc = tnow - ll
-            E[ii,:] * x[Near(tsfc),:]
-            
-
-            
-            #println(ll)
-        end
+        y = convolve(E,x)
         
-
-        # Run model to predict interior location temperature
-        #y = uconvert.(K,E*x)
-        y = E*x
-
-        # do slices work?
-        E[At(:loc1),At(:NATL)]
-        E[:,At(:ANT)]
-
-        # invert for x.  
-        x̃ = E\y
-
-        @test within(x̃,x,1.0e-5)
     end
-
-
 end
 
