@@ -229,7 +229,8 @@ function hessian(op::OverdeterminedProblem)
 end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
-symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix},Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
 # UnitfulLinearAlgebra returns UnitfulMatrix type, convert to scalar
 #symmetric_innerproduct(E::AbstractUnitfulMatrix) = Matrix(transpose(E)*E)
 #symmetric_innerproduct(E::AbstractUnitfulMatrix,Cnn⁻¹::AbstractUnitfulMatrix) = Matrix(transpose(E)*(Cnn⁻¹*E))

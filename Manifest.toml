@@ -605,9 +605,9 @@ version = "0.5.10"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
-git-tree-sha1 = "2c3fc86d52dfbada1a2e5e150e50f06c30ef149c"
+git-tree-sha1 = "9926529455a331ed73c19ff06d16906737a876ed"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.6.2"
+version = "0.6.3"
 
 [[deps.Markdown]]
 deps = ["Base64"]

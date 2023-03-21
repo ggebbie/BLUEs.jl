@@ -295,8 +295,8 @@ end
 
     @testset "source water inversion: obs at one time, no circulation lag" begin
 
-        using DimensionalData
-        using DimensionalData: @dim
+        #using DimensionalData
+        #using DimensionalData: @dim
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
@@ -315,7 +315,18 @@ end
         # invert for x.  
         x̃ = E\y
 
-        @test within(x̃,x,1.0e-5)
+        σₓ = 1.0
+        Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₓ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+
+        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        x̃ = solve(problem,alg=:hessian)
+        x̃ = solve(problem,alg=:textbook)
+
+        #@test x ≈ x̃.v
+        @test cost(x̃,problem) < 1e-5 # no noise in ob
+        @test within(x̃.v,x,1.0e-5)
     end
 
     @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
