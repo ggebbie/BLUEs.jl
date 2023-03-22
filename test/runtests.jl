@@ -315,10 +315,10 @@ end
         # invert for x.  
         x̃ = E\y
 
-        σₓ = 1.0
+        σₙ = 1.0
         Cnndims = (first(dims(E)),first(dims(E)))
         #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
-        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₓ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₙ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
 
         problem = OverdeterminedProblem(y,E,Cnn⁻¹)
         x̃ = solve(problem,alg=:hessian)
