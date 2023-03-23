@@ -1032,7 +1032,7 @@ version = "1.12.4"
 
 [[deps.UnitfulLinearAlgebra]]
 deps = ["DimensionalData", "LinearAlgebra", "SparseArrays", "Statistics", "Unitful"]
-path = "/home/gebbie/projects/UnitfulLinearAlgebra/"
+path = "/home/gebbie/projects/UnitfulLinearAlgebra.jl/"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 version = "0.1.0"
 

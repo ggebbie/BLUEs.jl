@@ -13,61 +13,7 @@ using DimensionalData:@dim
 const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
-"""
-    Are two matrices within a certain tolerance?
-    Use to simplify tests.
-    """
-within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
-within(A::UnitfulLinearAlgebra.AbstractUnitfulType,B::UnitfulLinearAlgebra.AbstractUnitfulType,tol) =  maximum(abs.(parent(A - B))) < tol
-
-"""
-    function random_source_water_matrix_vector_pair(M)
-
-    M: number of interior locations, observations
-    N=3: number of surface regions (fixed), solution or state
-
-    return E,x
-"""
-function random_source_water_matrix_vector_pair(M)
-
-    #using DimensionalData
-    #using DimensionalData: @dim
-    #cm = u"cm"
-    yr = u"yr"
-    K = u"K"
-    percent = u"percent"
-    surfaceregions = [:NATL,:ANT,:SUBANT]
-    interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:M]
-    N = length(surfaceregions)
-    
-    # observations have units of temperature
-    urange = fill(K,M)
-    # solution also has units of temperature
-    udomain = fill(K,N)
-    Eparent = rand(M,N)#*100percent
-
-    # normalize to conserve mass
-    for nrow = 1:size(Eparent,1)
-        Eparent[nrow,:] ./= sum(Eparent[nrow,:])
-    end
-    
-    E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
-
-    x = UnitfulDimMatrix(randn(N),fill(K,N),dims=(SurfaceRegion(surfaceregions)))
-    return E,x
-end
-
-"""
-   Take the convolution of E and x
-
-    Account for proper overlap of dimensions
-    Sum and take into account units.
-"""
-function convolve(E::AbstractDimArray,x::AbstractDimArray)
-    tnow = last(first(dims(x)))
-    lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
-end
+include("test_functions.jl")
 
 @testset "BLUEs.jl" begin
 
@@ -298,102 +244,6 @@ end
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
 
-        """
-    function random_source_water_matrix_vector_pair_with_lag(M)
-
-    M: number of interior locations, observations
-    N=3: number of surface regions (fixed), solution or state
-
-    return E,x
-"""
-        function source_water_matrix_vector_pair_with_lag(M)
-
-            #using DimensionalData
-            #using DimensionalData: @dim
-            #cm = u"cm"
-            yr = u"yr"
-            K = u"K"
-            #percent = u"percent"
-            surfaceregions = [:NATL,:ANT,:SUBANT]
-            lags = (0:(M-1))yr
-            years = (1990:2000)yr
-
-            Myears = length(years)
-            N = length(surfaceregions)
-            
-            # observations have units of temperature
-            urange1 = fill(K,M)
-            urange2 = fill(K,Myears)
-            # solution also has units of temperature
-            udomain = fill(K,N)
-            Eparent = rand(M,N)#*100percent
-
-            # normalize to conserve mass
-            for nrow = 1:size(Eparent,1)
-                Eparent /= sum(Eparent)
-            end
-            
-            E = UnitfulDimMatrix(ustrip.(Eparent),urange1,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
-            x = UnitfulDimMatrix(randn(Myears,N),urange2,fill(unit(1.0),N),dims=(Ti(years),SurfaceRegion(surfaceregions)))
-            return E,x
-        end
-
-"""
-    function source_water_matrix_vector_pair_with_lag(M)
-
-    M: number of interior locations, observations
-    N=3: number of surface regions (fixed), solution or state
-
-    return E,x
-"""
-        function source_water_DimArray_vector_pair_with_lag(M)
-
-            #using DimensionalData
-            #using DimensionalData: @dim
-            #cm = u"cm"
-            yr = u"yr"
-            K = u"K"
-            #percent = u"percent"
-            surfaceregions = [:NATL,:ANT,:SUBANT]
-            lags = (0:(M-1))yr
-            years = (1990:2000)yr
-
-            Myears = length(years)
-            N = length(surfaceregions)
-            
-            Eparent = rand(M,N)#*100percent
-            # normalize to conserve mass
-            for nrow = 1:size(Eparent,1)
-                Eparent /= sum(Eparent)
-            end
-            
-            M = DimArray(Eparent,(Ti(lags),SurfaceRegion(surfaceregions)))
-            x = DimArray(randn(Myears,N)K,(Ti(years),SurfaceRegion(surfaceregions)))
-            return M,x
-        end
-
-        function addcontrol(x₀,u)
-
-            x = deepcopy(x₀)
-            ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
-            for ii in eachindex(x₀)
-                # check units
-                ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
-                x[ii] += u[ii]
-            end
-            return x
-        end
-
-        function addcontrol!(x,u)
-
-            ~isequal(length(x),length(u)) && error("x and u different lengths")
-            for ii in eachindex(x)
-                # check units
-                ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
-                x[ii] += u[ii]
-            end
-            return x
-        end
 
         m = 11
         M,x = source_water_DimArray_vector_pair_with_lag(m)
@@ -422,59 +272,40 @@ end
         #u = randn(length(x₀))K
         #x = addcontrol(x₀,u) 
 
-        function predictobs(u,M,x₀)
-            x = addcontrol(x₀,u) 
-            return y = convolve(M,x)
-        end
             
         # probe to get E matrix.
+        E = impulseresponse(x₀,M)
 
-        # what are the expected units of the E matrix?
-        Eunits = Matrix{Unitful.FreeUnits}(undef,length(y),length(x₀))
-        for ii in eachindex(y)
-            for jj in eachindex(x₀)
-                if length(y) == 1 && length(x) ==1
-                    Eunits[ii,jj] = unit(y)/unit(x₀)
-                elseif length(x) == 1
-                    Eunits[ii,jj] = unit.(y)[ii]/unit(x₀)
-                elseif length(y) ==1
-                    Eunits[ii,jj] = unit(y)/unit.(x₀)[jj]
-                else
-                    Eunits[ii,jj] = unit.(y)[ii]/unit.(x₀)[jj]
-                end
-            end
-        end
-        
-        Eu = zeros(1,length(x₀)).*Eunits
-        u = zeros(length(x₀)).*unit.(x₀)[:]
-        y₀ = predictobs(u,M,x₀)
-        for rr in eachindex(x₀)
-            u = zeros(length(x₀)).*unit.(x₀)[:]
-            Δu = 1*unit.(x₀)[rr]
-            u[rr] += Δu
-            y = predictobs(u,M,x₀)
-            Eu[rr] = (y - y₀)/Δu
-        end
-        E = UnitfulMatrix(Eu)
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(x[:])
+        @test isapprox(y,getindexqty(ỹ,1))
+
+        x̃ = E\UnitfulMatrix([y]) 
+        @test isapprox(y,getindexqty(E*x̃,1))
 
         # now in a position to use BLUEs to solve
         # should handle matrix left divide with
         # unitful scalars in UnitfulLinearAlgebra
-        x̃ = E\UnitfulMatrix([y]) 
-
+        
         σₙ = 1.0
-        Cnndims = (first(dims(E)),first(dims(E)))
+        σₓ = 1.0
+        #Cnndims = (first(dims(E)),first(dims(E)))
         #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
-        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₙ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=true)
 
-        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-        x̃ = solve(problem,alg=:hessian)
-        x̃ = solve(problem,alg=:textbook)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=true)
+
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        x̃ = solve(problem)
 
         #@test x ≈ x̃.v
-        @test cost(x̃,problem) < 1e-5 # no noise in ob
-        @test within(x̃.v,x,1.0e-5)
+        #@test cost(x̃,problem) < 1e-5 # no noise in ob
+        #@test within(x̃.v,x,1.0e-5)
 
+        # Error: matrices not dimensionally conformable for addition
+
+        # Also need to put answer back into good format. (DimArray)
     end
 end
 
