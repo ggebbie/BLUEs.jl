@@ -247,11 +247,9 @@ include("test_functions.jl")
 
         m = 11
         M,x = source_water_DimArray_vector_pair_with_lag(m)
-        #M,x = random_source_water_matrix_vector_pair_with_lag(m)
 
         # Run model to predict interior location temperature
         # convolve E and x
-        # run through all lags
         y = convolve(M,x)
 
         ## invert for y for x̃
@@ -268,11 +266,6 @@ include("test_functions.jl")
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
         #x₀ = UnitfulDimMatrix(zeros(size(x)),urange,fill(K,n),dims=(Ti(years),last(dims(M))))
 
-        # test that addcontrol works. It does.
-        #u = randn(length(x₀))K
-        #x = addcontrol(x₀,u) 
-
-            
         # probe to get E matrix.
         E = impulseresponse(x₀,M)
 
@@ -291,9 +284,9 @@ include("test_functions.jl")
         σₓ = 1.0
         #Cnndims = (first(dims(E)),first(dims(E)))
         #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=true)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
 
         #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
