@@ -522,6 +522,10 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
+function convolve(x::AbstractDimArray,E::AbstractDimArray,tnow)
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+end
 
 # function convolve(x::AbstractDimArray,F::Tuple)
 #     E = F[1]

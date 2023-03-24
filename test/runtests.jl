@@ -295,5 +295,57 @@ include("test_functions.jl")
         #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
 
     end
+    @testset "source water inversion: obs timeseries, many surface regions, with circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+        m = 5 # how much of a lag is possible?
+        M,x = source_water_DimArray_vector_pair_with_lag(m)
+        n = size(M,2) # surface regions
+        Tx = first(dims(x)) #years = (1990:2000)yr
+        x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
+        # get synthetic observations
+        y = DimArray([convolve(x,M,Tx[ii]) for (ii,yy) in enumerate(Tx)],Tx)
+
+        ## Stopped here.
+        # probe to get E matrix. Use function convolve
+        #E = Matrix
+        for (ii,yy) in enumerate(Tx)
+            println(impulseresponse(convolve,x₀,M,Tx[ii]) )
+        end
+
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(x[:])
+        @test isapprox(y,getindexqty(ỹ,1))
+
+        x̂ = E\UnitfulMatrix([y]) 
+        @test isapprox(y,getindexqty(E*x̂,1))
+
+        # now in a position to use BLUEs to solve
+        # should handle matrix left divide with
+        # unitful scalars in UnitfulLinearAlgebra
+        
+        σₙ = 0.01
+        σₓ = 100.0
+        #Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=true)
+
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        @test within(y,getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
+
+        @test cost(x̃,problem) < 1e-2 # no noise in ob
+
+        # Also need to put answer back into good format. (DimArray)
+        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+
+    end
 end
 
