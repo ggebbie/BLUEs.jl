@@ -1,12 +1,15 @@
 module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
+using DimensionalData
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
+export expectedunits, impulseresponse, convolve
+export predictobs, addcontrol, addcontrol!
 
-import Base: show, getproperty, propertynames, (*), (+), (-)
-
+import Base: show, getproperty, propertynames, (*), (+), (-), sum
+#import Base.:*
 import LinearAlgebra: pinv, transpose
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
@@ -112,7 +115,7 @@ function getproperty(x::Estimate, d::Symbol)
     end
 end
 
-propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
+Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 
 # Template code to make some property names private
 #Base.propertynames(x::Estimate, private::Bool=false) =
@@ -245,7 +248,7 @@ symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(C
 
     Left pseudo-inverse (i.e., least-squares estimator)
 """
-function pinv(op::OverdeterminedProblem)
+function LinearAlgebra.pinv(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
     return ECE \ transpose(CE)
@@ -399,7 +402,7 @@ function sum(A::NamedTuple)
     end
     return Asum
 end
-function transpose(A::NamedTuple) 
+function LinearAlgebra.transpose(A::NamedTuple) 
     
     # Update to use parametric type to set type of Vector
     c = Vector(undef, length(A))
@@ -407,6 +410,118 @@ function transpose(A::NamedTuple)
         c[i] = transpose(V) # b index safe?
     end
     return NamedTuple{keys(A)}(c)
+end
+
+"""
+function impulseresponse(x₀,M)
+
+    Probe a function to determine its linear response in matrix form.
+    Assumes units are needed and available.
+    A simpler function to handle cases without units would be nice.
+
+    funk:: function to be probed
+    x:: input variable
+    args:: the arguments that follow x in `funk`
+"""
+function impulseresponse(funk::Function,x,args...)
+    # u = 0.0,x[:]) # error, * not available: zeros(length(x)) .* unit.(x)[:]
+    u = Quantity.(zeros(length(x)),unit.(x)[:])
+    y₀ = funk(x,args...)
+    Eunits = expectedunits(y₀,x)
+    Eu = Quantity.(zeros(1,length(x)),Eunits)
+
+    for rr in eachindex(x)
+        #u = zeros(length(x)).*unit.(x)[:]
+        u = Quantity.(zeros(length(x)),unit.(x)[:])
+        Δu = Quantity(1.0,unit.(x)[rr])
+        u[rr] += Δu
+        x₁ = addcontrol(x,u)
+        y = funk(x₁,args...)
+        Eu[rr] = (y - y₀)/Δu
+    end
+
+    # consider returning sparse matrix
+    if length(x) == 1 && length(y₀) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit(y₀)],[unit(x)])
+    elseif length(y₀) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit.(y₀)],unit.(x)[:])
+    elseif length(x) == 1
+        return UnitfulMatrix(ustrip.(Eu),unit.(y₀)[:],[unit(x)])
+    end
+    #return E = UnitfulMatrix(Eu)
+end
+
+function expectedunits(y,x)
+    Eunits = Matrix{Unitful.FreeUnits}(undef,length(y),length(x))
+    for ii in eachindex(y)
+        for jj in eachindex(x)
+            if length(y) == 1 && length(x) ==1
+                Eunits[ii,jj] = unit(y)/unit(x)
+            elseif length(x) == 1
+                Eunits[ii,jj] = unit.(y)[ii]/unit(x)
+            elseif length(y) ==1
+                Eunits[ii,jj] = unit(y)/unit.(x)[jj]
+            else
+                Eunits[ii,jj] = unit.(y)[ii]/unit.(x)[jj]
+            end
+        end
+    end
+    return Eunits
+end
+
+"""
+    function convolve(E::AbstractDimArray,x::AbstractDimArray)
+
+    Take the convolution of E and x
+    Account for proper overlap of dimensions
+    Sum and take into account units.
+"""
+function convolve(x::AbstractDimArray,E::AbstractDimArray)
+    tnow = last(first(dims(x)))
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+end
+
+# function convolve(x::AbstractDimArray,F::Tuple)
+#     E = F[1]
+#     tnow = last(first(dims(x)))
+#     lags = first(dims(E))
+#     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+# end
+
+"""
+    function predictobs(funk,x...)
+
+    Get observations derived from function `funk`
+    y = funk(x...)
+    Turns out to not be useful so far.
+"""
+function predictobs(funk,x...)
+    #x = addcontrol(x₀,u) 
+    return y = funk(x...)
+end
+
+function addcontrol(x₀::AbstractDimArray,u)
+
+    x = deepcopy(x₀)
+    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
+    for ii in eachindex(x₀)
+        # check units
+        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
+        x[ii] += u[ii]
+    end
+    return x
+end
+
+function addcontrol!(x::AbstractDimArray,u)
+
+    ~isequal(length(x),length(u)) && error("x and u different lengths")
+    for ii in eachindex(x)
+        # check units
+        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
+        x[ii] += u[ii]
+    end
+    return x
 end
 
 end # module

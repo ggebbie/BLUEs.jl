@@ -44,18 +44,6 @@ function random_source_water_matrix_vector_pair(M)
 end
 
 """
-   Take the convolution of E and x
-
-    Account for proper overlap of dimensions
-    Sum and take into account units.
-"""
-function convolve(E::AbstractDimArray,x::AbstractDimArray)
-    tnow = last(first(dims(x)))
-    lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
-end
-
-"""
     function random_source_water_matrix_vector_pair_with_lag(M)
 
     M: number of interior locations, observations
@@ -129,63 +117,42 @@ function source_water_DimArray_vector_pair_with_lag(M)
     return M,x
 end
 
-function addcontrol(x₀,u)
 
-    x = deepcopy(x₀)
-    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
-    for ii in eachindex(x₀)
-        # check units
-        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
+# function predictobs(u,x₀,M)
+#     x = addcontrol(x₀,u) 
+#     return y = convolve(M,x)
+# end
 
-function addcontrol!(x,u)
 
-    ~isequal(length(x),length(u)) && error("x and u different lengths")
-    for ii in eachindex(x)
-        # check units
-        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
+# function expectedunits(y,x₀)
+#     Eunits = Matrix{Unitful.FreeUnits}(undef,length(y),length(x₀))
+#     for ii in eachindex(y)
+#         for jj in eachindex(x₀)
+#             if length(y) == 1 && length(x) ==1
+#                 Eunits[ii,jj] = unit(y)/unit(x₀)
+#             elseif length(x) == 1
+#                 Eunits[ii,jj] = unit.(y)[ii]/unit(x₀)
+#             elseif length(y) ==1
+#                 Eunits[ii,jj] = unit(y)/unit.(x₀)[jj]
+#             else
+#                 Eunits[ii,jj] = unit.(y)[ii]/unit.(x₀)[jj]
+#             end
+#         end
+#     end
+#     return Eunits
+# end
 
-function predictobs(u,M,x₀)
-    x = addcontrol(x₀,u) 
-    return y = convolve(M,x)
-end
-
-function expectedunits(y,x₀)
-    Eunits = Matrix{Unitful.FreeUnits}(undef,length(y),length(x₀))
-    for ii in eachindex(y)
-        for jj in eachindex(x₀)
-            if length(y) == 1 && length(x) ==1
-                Eunits[ii,jj] = unit(y)/unit(x₀)
-            elseif length(x) == 1
-                Eunits[ii,jj] = unit.(y)[ii]/unit(x₀)
-            elseif length(y) ==1
-                Eunits[ii,jj] = unit(y)/unit.(x₀)[jj]
-            else
-                Eunits[ii,jj] = unit.(y)[ii]/unit.(x₀)[jj]
-            end
-        end
-    end
-    return Eunits
-end
-
-function impulseresponse(x₀,M)
-    Eunits = expectedunits(y,x₀)
-    Eu = zeros(1,length(x₀)).*Eunits
-    u = zeros(length(x₀)).*unit.(x₀)[:]
-    y₀ = predictobs(u,M,x₀)
-    for rr in eachindex(x₀)
-        u = zeros(length(x₀)).*unit.(x₀)[:]
-        Δu = 1*unit.(x₀)[rr]
-        u[rr] += Δu
-        y = predictobs(u,M,x₀)
-        Eu[rr] = (y - y₀)/Δu
-    end
-    return E = UnitfulMatrix(Eu)
-end
+# function impulseresponse(x₀,M)
+#     Eunits = expectedunits(y,x₀)
+#     Eu = zeros(1,length(x₀)).*Eunits
+#     u = zeros(length(x₀)).*unit.(x₀)[:]
+#     y₀ = predictobs(u,M,x₀)
+#     for rr in eachindex(x₀)
+#         u = zeros(length(x₀)).*unit.(x₀)[:]
+#         Δu = 1*unit.(x₀)[rr]
+#         u[rr] += Δu
+#         y = predictobs(u,M,x₀)
+#         Eu[rr] = (y - y₀)/Δu
+#     end
+#     return E = UnitfulMatrix(Eu)
+# end
