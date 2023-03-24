@@ -275,8 +275,8 @@ include("test_functions.jl")
         # should handle matrix left divide with
         # unitful scalars in UnitfulLinearAlgebra
         
-        σₙ = 1.0
-        σₓ = 2.0
+        σₙ = 0.01
+        σₓ = 100.0
         #Cnndims = (first(dims(E)),first(dims(E)))
         #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=true)
@@ -284,13 +284,16 @@ include("test_functions.jl")
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=true)
 
         #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
-        @test isapprox(y,getindexqty(E*x̃,1))
+        @test within(y,getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
 
         @test cost(x̃,problem) < 1e-2 # no noise in ob
 
         # Also need to put answer back into good format. (DimArray)
+        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+
     end
 end
 

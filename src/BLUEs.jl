@@ -3,7 +3,7 @@ module BLUEs
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
 
-export Estimate, OverdeterminedProblem, UnderdeterminedProblem
+export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
 export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!
@@ -22,6 +22,18 @@ import LinearAlgebra: pinv, transpose
 struct Estimate{Tv <: Number,TC <: Number} 
     v :: AbstractVector{Tv}
     C :: AbstractMatrix{TC}
+end
+
+"""
+    struct DimEstimate
+    
+    A structure with some vector of values v and associated covariance matrix C.
+    Add axis dimensions.
+"""
+struct DimEstimate{Tv <: Number,TC <: Number} 
+    v :: AbstractVector{Tv}
+    C :: AbstractMatrix{TC}
+    dims :: Tuple
 end
 
 """
@@ -67,7 +79,7 @@ struct UnderdeterminedProblem
     E :: AbstractMatrix
     Cnn :: AbstractMatrix
     Cxx :: Union{AbstractMatrix}
-    x₀ :: Union{AbstractVector,Missing}
+    x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
 end
 
 
@@ -79,7 +91,7 @@ end
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
 
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate{<:Number})
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
     summary(io, x); println(io)
     println(io, "Estimate and 1σ uncertainty")
     show(io, mime, x.x)
@@ -114,8 +126,27 @@ function getproperty(x::Estimate, d::Symbol)
         return getfield(x, d)
     end
 end
+function getproperty(x::DimEstimate, d::Symbol)
+    if d === :σ
+        return .√diag(x.C)
+    elseif d === :x
+
+        # x.v can be a UnitfulVector, so wrap with Matrix
+        if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
+            v = Matrix(x.v)
+        else
+            v = x.v
+        end
+        tmp = measurement.(v,x.σ)
+        return DimArray(reshape(tmp,size(x.dims)),x.dims)
+    #return x.v .± x.σ
+    else
+        return getfield(x, d)
+    end
+end
 
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
+Base.propertynames(x::DimEstimate) = (:x, :σ, fieldnames(typeof(x))...)
 
 # Template code to make some property names private
 #Base.propertynames(x::Estimate, private::Bool=false) =
@@ -264,14 +295,23 @@ function solve(up::UnderdeterminedProblem)
     if ismissing(up.x₀)
         n = up.y
     else
-        n = up.y - up.E*up.x₀
+        if up.x₀ isa DimArray
+            x₀ = UnitfulMatrix(up.x₀[:])
+        else
+            x₀ = up.x₀
+        end
+        n = up.y - up.E*x₀
     end
     Cxy = up.Cxx*transpose(up.E)
     Cyy = up.E*Cxy + up.Cnn
     v = Cxy*(Cyy \ n)
-    (~ismissing(up.x₀)) && (v += up.x₀)
+    (~ismissing(up.x₀)) && (v += x₀)
     P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
-    return Estimate(v,P)
+    if up.x₀ isa DimArray
+        return DimEstimate(v,P,dims(up.x₀))
+    else
+        return Estimate(v,P)
+    end
 end
 
 """    
@@ -279,6 +319,7 @@ end
     error propagation.
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
+*(F::AbstractMatrix,x::DimEstimate) = Estimate(F*x.v,F*x.C*transpose(F),x.dims)
 
 """    
     Matrix addition for Estimate includes
