@@ -237,51 +237,46 @@ include("test_functions.jl")
 
     @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
 
-        
-        #using DimensionalData
-        #using DimensionalData: @dim
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
-
 
         m = 11
         M,x = source_water_DimArray_vector_pair_with_lag(m)
 
         # Run model to predict interior location temperature
         # convolve E and x
-        y = convolve(M,x)
+        y = convolve(x,M)
+
+        # could also use this format
+        y = predictobs(convolve,x,M)
 
         ## invert for y for x̃
-
         # Given, M and y. Make first guess for x.
         n = size(M,2)
         # add adjustment
         yr = u"yr"
         years = (1990:2000)yr
-        #urange = fill(K,length(years))
 
-        # DimArray is good enough.
-        # This is an array, not necessarily a matrix.
+        # DimArray is good enough. This is an array, not necessarily a matrix.
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
-        #x₀ = UnitfulDimMatrix(zeros(size(x)),urange,fill(K,n),dims=(Ti(years),last(dims(M))))
 
-        # probe to get E matrix.
-        E = impulseresponse(x₀,M)
+        # probe to get E matrix. Use function convolve
+        E = impulseresponse(convolve,x₀,M)
 
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(x[:])
         @test isapprox(y,getindexqty(ỹ,1))
 
-        x̃ = E\UnitfulMatrix([y]) 
-        @test isapprox(y,getindexqty(E*x̃,1))
+        x̂ = E\UnitfulMatrix([y]) 
+        @test isapprox(y,getindexqty(E*x̂,1))
 
         # now in a position to use BLUEs to solve
         # should handle matrix left divide with
         # unitful scalars in UnitfulLinearAlgebra
         
-        σₙ = 1.0
-        σₓ = 1.0
+        σₙ = 0.01
+        σₓ = 100.0
         #Cnndims = (first(dims(E)),first(dims(E)))
         #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
@@ -289,16 +284,68 @@ include("test_functions.jl")
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
 
         #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
+        @test within(y,getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
 
-        #@test x ≈ x̃.v
-        #@test cost(x̃,problem) < 1e-5 # no noise in ob
-        #@test within(x̃.v,x,1.0e-5)
-
-        # Error: matrices not dimensionally conformable for addition
+        @test cost(x̃,problem) < 1e-2 # no noise in ob
 
         # Also need to put answer back into good format. (DimArray)
+        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+
+    end
+    @testset "source water inversion: obs timeseries, many surface regions, with circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+        m = 5 # how much of a lag is possible?
+        M,x = source_water_DimArray_vector_pair_with_lag(m)
+        n = size(M,2) # surface regions
+        Tx = first(dims(x)) #years = (1990:2000)yr
+        x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
+        # get synthetic observations
+        y = DimArray([convolve(x,M,Tx[ii]) for (ii,yy) in enumerate(Tx)],Tx)
+
+        ## Stopped here.
+        # probe to get E matrix. Use function convolve
+        #E = Matrix
+        for (ii,yy) in enumerate(Tx)
+            println(impulseresponse(convolve,x₀,M,Tx[ii]) )
+        end
+
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(x[:])
+        @test isapprox(y,getindexqty(ỹ,1))
+
+        x̂ = E\UnitfulMatrix([y]) 
+        @test isapprox(y,getindexqty(E*x̂,1))
+
+        # now in a position to use BLUEs to solve
+        # should handle matrix left divide with
+        # unitful scalars in UnitfulLinearAlgebra
+        
+        σₙ = 0.01
+        σₓ = 100.0
+        #Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=true)
+
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        @test within(y,getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
+
+        @test cost(x̃,problem) < 1e-2 # no noise in ob
+
+        # Also need to put answer back into good format. (DimArray)
+        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+
     end
 end
 
