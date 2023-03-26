@@ -1,12 +1,15 @@
 module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
+using DimensionalData
 
-export Estimate, OverdeterminedProblem, UnderdeterminedProblem
+export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
+export expectedunits, impulseresponse, convolve
+export predictobs, addcontrol, addcontrol!
 
-import Base: show, getproperty, propertynames, (*), (+), (-)
-
+import Base: show, getproperty, propertynames, (*), (+), (-), sum
+#import Base.:*
 import LinearAlgebra: pinv, transpose
 
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
@@ -19,6 +22,18 @@ import LinearAlgebra: pinv, transpose
 struct Estimate{Tv <: Number,TC <: Number} 
     v :: AbstractVector{Tv}
     C :: AbstractMatrix{TC}
+end
+
+"""
+    struct DimEstimate
+    
+    A structure with some vector of values v and associated covariance matrix C.
+    Add axis dimensions.
+"""
+struct DimEstimate{Tv <: Number,TC <: Number} 
+    v :: AbstractVector{Tv}
+    C :: AbstractMatrix{TC}
+    dims :: Tuple
 end
 
 """
@@ -64,7 +79,7 @@ struct UnderdeterminedProblem
     E :: AbstractMatrix
     Cnn :: AbstractMatrix
     Cxx :: Union{AbstractMatrix}
-    x₀ :: Union{AbstractVector,Missing}
+    x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
 end
 
 
@@ -76,7 +91,7 @@ end
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
 
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate{<:Number})
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
     summary(io, x); println(io)
     println(io, "Estimate and 1σ uncertainty")
     show(io, mime, x.x)
@@ -111,8 +126,27 @@ function getproperty(x::Estimate, d::Symbol)
         return getfield(x, d)
     end
 end
+function getproperty(x::DimEstimate, d::Symbol)
+    if d === :σ
+        return .√diag(x.C)
+    elseif d === :x
 
-propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
+        # x.v can be a UnitfulVector, so wrap with Matrix
+        if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
+            v = Matrix(x.v)
+        else
+            v = x.v
+        end
+        tmp = measurement.(v,x.σ)
+        return DimArray(reshape(tmp,size(x.dims)),x.dims)
+    #return x.v .± x.σ
+    else
+        return getfield(x, d)
+    end
+end
+
+Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
+Base.propertynames(x::DimEstimate) = (:x, :σ, fieldnames(typeof(x))...)
 
 # Template code to make some property names private
 #Base.propertynames(x::Estimate, private::Bool=false) =
@@ -229,7 +263,8 @@ function hessian(op::OverdeterminedProblem)
 end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
-symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix},Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
+symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
 # UnitfulLinearAlgebra returns UnitfulMatrix type, convert to scalar
 #symmetric_innerproduct(E::AbstractUnitfulMatrix) = Matrix(transpose(E)*E)
 #symmetric_innerproduct(E::AbstractUnitfulMatrix,Cnn⁻¹::AbstractUnitfulMatrix) = Matrix(transpose(E)*(Cnn⁻¹*E))
@@ -244,7 +279,7 @@ symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(C
 
     Left pseudo-inverse (i.e., least-squares estimator)
 """
-function pinv(op::OverdeterminedProblem)
+function LinearAlgebra.pinv(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
     return ECE \ transpose(CE)
@@ -260,14 +295,23 @@ function solve(up::UnderdeterminedProblem)
     if ismissing(up.x₀)
         n = up.y
     else
-        n = up.y - up.E*up.x₀
+        if up.x₀ isa DimArray
+            x₀ = UnitfulMatrix(up.x₀[:])
+        else
+            x₀ = up.x₀
+        end
+        n = up.y - up.E*x₀
     end
     Cxy = up.Cxx*transpose(up.E)
     Cyy = up.E*Cxy + up.Cnn
     v = Cxy*(Cyy \ n)
-    (~ismissing(up.x₀)) && (v += up.x₀)
+    (~ismissing(up.x₀)) && (v += x₀)
     P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
-    return Estimate(v,P)
+    if up.x₀ isa DimArray
+        return DimEstimate(v,P,dims(up.x₀))
+    else
+        return Estimate(v,P)
+    end
 end
 
 """    
@@ -275,6 +319,7 @@ end
     error propagation.
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
+*(F::AbstractMatrix,x::DimEstimate) = Estimate(F*x.v,F*x.C*transpose(F),x.dims)
 
 """    
     Matrix addition for Estimate includes
@@ -292,7 +337,7 @@ function cost(x̃::Estimate,op::OverdeterminedProblem)
     isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
     return J
 end
-function cost(x̃::Estimate,up::UnderdeterminedProblem)
+function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
    Jdata = datacost(x̃,up)
    Jcontrol = controlcost(x̃,up) 
    J = Jdata + Jcontrol
@@ -302,7 +347,7 @@ end
 """
     Cost function contribution from observations
 """
-function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+function datacost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
         Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
@@ -315,9 +360,13 @@ end
 """
     Cost function contribution from control vector
 """
-function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
-    # not implemented yet
-    Δx = x̃.v - p.x₀
+function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+    if p.x₀ isa DimArray
+        Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
+    else
+        Δx = x̃.v - p.x₀
+    end
+    
     if typeof(p) == UnderdeterminedProblem
         Cxx⁻¹ = inv(p.Cxx) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
@@ -398,7 +447,7 @@ function sum(A::NamedTuple)
     end
     return Asum
 end
-function transpose(A::NamedTuple) 
+function LinearAlgebra.transpose(A::NamedTuple) 
     
     # Update to use parametric type to set type of Vector
     c = Vector(undef, length(A))
@@ -406,6 +455,153 @@ function transpose(A::NamedTuple)
         c[i] = transpose(V) # b index safe?
     end
     return NamedTuple{keys(A)}(c)
+end
+
+"""
+function impulseresponse(x₀,M)
+
+    Probe a function to determine its linear response in matrix form.
+    Assumes units are needed and available.
+    A simpler function to handle cases without units would be nice.
+
+    funk:: function to be probed
+    x:: input variable
+    args:: the arguments that follow x in `funk`
+"""
+function impulseresponse(funk::Function,x,args...)
+    # u = 0.0,x[:]) # error, * not available: zeros(length(x)) .* unit.(x)[:]
+    u = Quantity.(zeros(length(x)),unit.(vec(x)))
+    y₀ = funk(x,args...)
+    #Eunits = expectedunits(y₀,x)
+    #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
+
+    Ep = zeros(length(y₀),length(x))
+    for rr in eachindex(x)
+        #u = zeros(length(x)).*unit.(x)[:]
+        if length(x) > 1
+            u = Quantity.(zeros(length(x)),unit.(vec(x)))
+        else
+            u = Quantity(0.0,unit(x))
+        end
+        
+        Δu = Quantity(1.0,unit.(x)[rr])
+        u[rr] += Δu
+        x₁ = addcontrol(x,u)
+        y = funk(x₁,args...)
+        #println(y)
+        if y isa AbstractDimArray
+            Ep[:,rr] .= parent((y - y₀)/Δu)
+        else
+            Ep[:,rr] .= ustrip.((y - y₀)/Δu)
+        end
+    end
+
+    # This function could use vcat to be cleaner (but maybe slower)
+    # Note: Need to add ability to return sparse matrix 
+    #return E = UnitfulMatrix(Ep,unit.(vec(y₀)),unit.(vec(x)))
+    #return E = UnitfulMatrix_from_input_output(Eu,y₀,x)
+    #return E = UnitfulMatrix(Eu)
+    if length(x) == 1 && length(y₀) == 1
+        return UnitfulMatrix(Ep,[unit(y₀)],[unit(x)])
+    elseif length(y₀) == 1
+        return UnitfulMatrix(Ep,[unit(y₀)],vec(unit.(x)))
+    elseif length(x) == 1
+        return UnitfulMatrix(Ep,vec(unit.(y₀)),[unit(x)])
+    else
+        return UnitfulMatrix(Ep,vec(unit.(y₀)),vec(unit.(x)))
+    end
+end
+
+function UnitfulMatrix_from_input_output(Eu,y,x)
+    if length(x) == 1 && length(y) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit(y)],[unit(x)])
+    elseif length(y) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit.(y)],vec(unit.(x)))
+    elseif length(x) == 1
+        return UnitfulMatrix(ustrip.(Eu),vec(unit.(y)),[unit(x)])
+    else
+        return UnitfulMatrix(ustrip.(Eu),vec(unit.(y)),vec(unit.(x)))
+    end
+end
+
+function expectedunits(y,x)
+    Eunits = Matrix{Unitful.FreeUnits}(undef,length(y),length(x))
+    for ii in eachindex(y)
+        for jj in eachindex(x)
+            if length(y) == 1 && length(x) ==1
+                Eunits[ii,jj] = unit(y)/unit(x)
+            elseif length(x) == 1
+                Eunits[ii,jj] = unit.(y)[ii]/unit(x)
+            elseif length(y) ==1
+                Eunits[ii,jj] = unit(y)/unit.(x)[jj]
+            else
+                Eunits[ii,jj] = unit.(y)[ii]/unit.(x)[jj]
+            end
+        end
+    end
+    return Eunits
+end
+
+"""
+    function convolve(E::AbstractDimArray,x::AbstractDimArray)
+
+    Take the convolution of E and x
+    Account for proper overlap of dimensions
+    Sum and take into account units.
+"""
+function convolve(x::AbstractDimArray,E::AbstractDimArray)
+    tnow = last(first(dims(x)))
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+end
+function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+end
+function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+    return DimArray([convolve(x,M,Tx[ii]) for (ii,yy) in enumerate(Tx)],Tx)
+end
+
+# function convolve(x::AbstractDimArray,F::Tuple)
+#     E = F[1]
+#     tnow = last(first(dims(x)))
+#     lags = first(dims(E))
+#     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+# end
+
+"""
+    function predictobs(funk,x...)
+
+    Get observations derived from function `funk`
+    y = funk(x...)
+    Turns out to not be useful so far.
+"""
+function predictobs(funk,x...)
+    #x = addcontrol(x₀,u) 
+    return y = funk(x...)
+end
+
+function addcontrol(x₀::AbstractDimArray,u)
+
+    x = deepcopy(x₀)
+    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
+    for ii in eachindex(x₀)
+        # check units
+        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
+        x[ii] += u[ii]
+    end
+    return x
+end
+
+function addcontrol!(x::AbstractDimArray,u)
+
+    ~isequal(length(x),length(u)) && error("x and u different lengths")
+    for ii in eachindex(x)
+        # check units
+        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
+        x[ii] += u[ii]
+    end
+    return x
 end
 
 end # module

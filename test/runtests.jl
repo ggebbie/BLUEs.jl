@@ -8,8 +8,12 @@ using UnitfulLinearAlgebra
 using Measurements
 using ToeplitzMatrices
 using SparseArrays
+using DimensionalData
+using DimensionalData:@dim
 const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
+
+include("test_functions.jl")
 
 @testset "BLUEs.jl" begin
 
@@ -177,7 +181,7 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1).^1,exact=true)
 
         Cnn⁻¹ = (one=Cnn⁻¹1, two =Cnn⁻¹1)
-        x = UnitfulMatrix(randn(N)m) # Doesn't yet work with UnitfulMatrix
+        x = UnitfulMatrix(randn(N)m) 
 
         # create perfect data
         y = E*x
@@ -193,6 +197,151 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
         #@test x ≈ pinv(problem) * y # inefficient way to solve problem
 
         # contaminate observations, check if error bars are correct
+    end
+
+    @testset "source water inversion: obs at one time, no circulation lag" begin
+
+        #using DimensionalData
+        #using DimensionalData: @dim
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+
+        M = 5
+        E,x = random_source_water_matrix_vector_pair(M)
+
+        # Run model to predict interior location temperature
+        #y = uconvert.(K,E*x)
+        y = E*x
+
+        # do slices work?
+        E[At(:loc1),At(:NATL)]
+        E[:,At(:ANT)]
+
+        # invert for x.  
+        x̃ = E\y
+
+        σₙ = 1.0
+        Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₙ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+
+        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        x̃ = solve(problem,alg=:hessian)
+        x̃ = solve(problem,alg=:textbook)
+
+        #@test x ≈ x̃.v
+        @test cost(x̃,problem) < 1e-5 # no noise in ob
+        @test within(x̃.v,x,1.0e-5)
+    end
+
+    @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+
+        m = 11
+        M,x = source_water_DimArray_vector_pair_with_lag(m)
+
+        # Run model to predict interior location temperature
+        # convolve E and x
+        y = convolve(x,M)
+
+        # could also use this format
+        y = predictobs(convolve,x,M)
+
+        ## invert for y for x̃
+        # Given, M and y. Make first guess for x.
+        n = size(M,2)
+        # add adjustment
+        yr = u"yr"
+        years = (1990:2000)yr
+
+        # DimArray is good enough. This is an array, not necessarily a matrix.
+        x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
+
+        # probe to get E matrix. Use function convolve
+        E = impulseresponse(convolve,x₀,M)
+
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        @test isapprox(y,getindexqty(ỹ,1))
+
+        x̂ = E\UnitfulMatrix([y]) 
+        @test isapprox(y,getindexqty(E*x̂,1))
+
+        # now in a position to use BLUEs to solve
+        # should handle matrix left divide with
+        # unitful scalars in UnitfulLinearAlgebra
+        
+        σₙ = 0.01
+        σₓ = 100.0
+        #Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        @test within(y[1],getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
+
+        @test cost(x̃,problem) < 5e-2 # no noise in ob
+
+        # Also need to put answer back into good format. (DimArray)
+        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+
+    end
+    @testset "source water inversion: obs timeseries, many surface regions, with circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+        m = 5 # how much of a lag is possible?
+        M,x = source_water_DimArray_vector_pair_with_lag(m)
+        n = size(M,2) # surface regions
+        Tx = first(dims(x)) #years = (1990:2000)yr
+        x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
+
+        # get synthetic observations
+        y = convolve(x,M,Tx)
+
+        E = impulseresponse(convolve,x₀,M,Tx)
+                        
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+
+        σₙ = 0.01
+        σₓ = 100.0
+        #Cnndims = (first(dims(E)),first(dims(E)))
+        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
+        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        # no noise in obs but some control penalty
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+    end
 end
 
-end
