@@ -337,7 +337,7 @@ function cost(x̃::Estimate,op::OverdeterminedProblem)
     isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
     return J
 end
-function cost(x̃::Estimate,up::UnderdeterminedProblem)
+function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
    Jdata = datacost(x̃,up)
    Jcontrol = controlcost(x̃,up) 
    J = Jdata + Jcontrol
@@ -347,7 +347,7 @@ end
 """
     Cost function contribution from observations
 """
-function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+function datacost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
         Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
@@ -360,7 +360,7 @@ end
 """
     Cost function contribution from control vector
 """
-function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     # not implemented yet
     Δx = x̃.v - p.x₀
     if typeof(p) == UnderdeterminedProblem
@@ -466,30 +466,58 @@ function impulseresponse(x₀,M)
 """
 function impulseresponse(funk::Function,x,args...)
     # u = 0.0,x[:]) # error, * not available: zeros(length(x)) .* unit.(x)[:]
-    u = Quantity.(zeros(length(x)),unit.(x)[:])
+    u = Quantity.(zeros(length(x)),unit.(vec(x)))
     y₀ = funk(x,args...)
-    Eunits = expectedunits(y₀,x)
-    Eu = Quantity.(zeros(1,length(x)),Eunits)
+    #Eunits = expectedunits(y₀,x)
+    #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
 
+    Ep = zeros(length(y₀),length(x))
     for rr in eachindex(x)
         #u = zeros(length(x)).*unit.(x)[:]
-        u = Quantity.(zeros(length(x)),unit.(x)[:])
+        if length(x) > 1
+            u = Quantity.(zeros(length(x)),unit.(vec(x)))
+        else
+            u = Quantity(0.0,unit(x))
+        end
+        
         Δu = Quantity(1.0,unit.(x)[rr])
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        Eu[rr] = (y - y₀)/Δu
+        #println(y)
+        if y isa AbstractDimArray
+            Ep[:,rr] .= parent((y - y₀)/Δu)
+        else
+            Ep[:,rr] .= ustrip.((y - y₀)/Δu)
+        end
     end
 
-    # consider returning sparse matrix
-    if length(x) == 1 && length(y₀) == 1
-        return UnitfulMatrix(ustrip.(Eu),[unit(y₀)],[unit(x)])
-    elseif length(y₀) == 1
-        return UnitfulMatrix(ustrip.(Eu),[unit.(y₀)],unit.(x)[:])
-    elseif length(x) == 1
-        return UnitfulMatrix(ustrip.(Eu),unit.(y₀)[:],[unit(x)])
-    end
+    # This function could use vcat to be cleaner (but maybe slower)
+    # Note: Need to add ability to return sparse matrix 
+    #return E = UnitfulMatrix(Ep,unit.(vec(y₀)),unit.(vec(x)))
+    #return E = UnitfulMatrix_from_input_output(Eu,y₀,x)
     #return E = UnitfulMatrix(Eu)
+    if length(x) == 1 && length(y₀) == 1
+        return UnitfulMatrix(Ep,[unit(y₀)],[unit(x)])
+    elseif length(y₀) == 1
+        return UnitfulMatrix(Ep,[unit(y₀)],vec(unit.(x)))
+    elseif length(x) == 1
+        return UnitfulMatrix(Ep,vec(unit.(y₀)),[unit(x)])
+    else
+        return UnitfulMatrix(Ep,vec(unit.(y₀)),vec(unit.(x)))
+    end
+end
+
+function UnitfulMatrix_from_input_output(Eu,y,x)
+    if length(x) == 1 && length(y) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit(y)],[unit(x)])
+    elseif length(y) == 1
+        return UnitfulMatrix(ustrip.(Eu),[unit.(y)],vec(unit.(x)))
+    elseif length(x) == 1
+        return UnitfulMatrix(ustrip.(Eu),vec(unit.(y)),[unit(x)])
+    else
+        return UnitfulMatrix(ustrip.(Eu),vec(unit.(y)),vec(unit.(x)))
+    end
 end
 
 function expectedunits(y,x)
@@ -522,9 +550,12 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
-function convolve(x::AbstractDimArray,E::AbstractDimArray,tnow)
+function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+end
+function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+    return DimArray([convolve(x,M,Tx[ii]) for (ii,yy) in enumerate(Tx)],Tx)
 end
 
 # function convolve(x::AbstractDimArray,F::Tuple)
