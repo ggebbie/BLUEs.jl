@@ -335,12 +335,12 @@ include("test_functions.jl")
         #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
-        @test within(y,getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
 
-        @test cost(x̃,problem) < 1e-2 # no noise in ob
-
-        # Also need to put answer back into good format. (DimArray)
-        #xtest = rebuild(x₀,reshape(x̃.x,size(x₀)))
+        # no noise in obs but some control penalty
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
 
     end
 end

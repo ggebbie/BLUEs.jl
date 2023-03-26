@@ -361,8 +361,12 @@ end
     Cost function contribution from control vector
 """
 function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
-    # not implemented yet
-    Δx = x̃.v - p.x₀
+    if p.x₀ isa DimArray
+        Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
+    else
+        Δx = x̃.v - p.x₀
+    end
+    
     if typeof(p) == UnderdeterminedProblem
         Cxx⁻¹ = inv(p.Cxx) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
