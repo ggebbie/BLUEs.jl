@@ -346,7 +346,7 @@ include("test_functions.jl")
 
     end
 
-    @testset "source water inversion: many obs timeseries, many surface regions, with circulation lag" begin
+    @testset "source water inversion: MANY OBS TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
@@ -397,8 +397,7 @@ include("test_functions.jl")
 
         σₙ = 0.01
         σₓ = 100.0
-        #Cnndims = (first(dims(E)),first(dims(E)))
-        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
 
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
