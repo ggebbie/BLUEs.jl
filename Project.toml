@@ -17,7 +17,6 @@ UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 [compat]
 DimensionalData = "0.24"
 Measurements = "2"
-Revise = "3"
 ToeplitzMatrices = "0.7, 0.8"
 Unitful = "1"
 julia = "1.8"
