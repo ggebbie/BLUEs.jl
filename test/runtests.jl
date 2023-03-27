@@ -395,24 +395,32 @@ include("test_functions.jl")
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
         yr = u"yr"
+
         nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+
         m = 6 # how many observational locations?
         interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:m]
+
+        # the dimensions of the state variable
         surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+
         n = length(surfaceregions)
 
-        # a water-mass matrix at each location
-        # 3D DimArray
-        #E = DimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
-
+        # pre-allocate a 3D DimArray
         M = DimArray(zeros(nτ,n,m),(Ti((0:(nτ-1))yr),SurfaceRegion(surfaceregions),InteriorLocation(interiorlocs)))
 
-        Tx = first(dims(x)) #years = (1990:2000)yr
-        nt = length(Tx)
-        M,x = source_water_DimArray_vector_pair_with_lag(nτ)
+        # fill it at each location
+        for loc in InteriorLocation(interiorlocs)
+            M[:,:,At(Symbol(loc))] = source_water_matrix_with_lag(surfaceregions,lags,years)
+        end
 
-        n = size(M,2) # surface regions
-        x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
+        # true solution
+        x= source_water_solution(surfaceregions,years)
+
+        # first guess of solution 
+        x₀ = DimArray(zeros(size(x))K,dims(x))
 
         # get synthetic observations
         y = convolve(x,M,Tx)
@@ -438,8 +446,6 @@ include("test_functions.jl")
 
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
 
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
         for jj in eachindex(vec(y))
