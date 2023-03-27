@@ -469,7 +469,6 @@ function impulseresponse(x₀,M)
     args:: the arguments that follow x in `funk`
 """
 function impulseresponse(funk::Function,x,args...)
-    # u = 0.0,x[:]) # error, * not available: zeros(length(x)) .* unit.(x)[:]
     u = Quantity.(zeros(length(x)),unit.(vec(x)))
     y₀ = funk(x,args...)
     #Eunits = expectedunits(y₀,x)
@@ -490,9 +489,15 @@ function impulseresponse(funk::Function,x,args...)
         y = funk(x₁,args...)
         #println(y)
         if y isa AbstractDimArray
-            Ep[:,rr] .= parent((y - y₀)/Δu)
+            Ep[:,rr] .= vec(parent((y - y₀)/Δu))
         else
-            Ep[:,rr] .= ustrip.((y - y₀)/Δu)
+            tmp = ustrip.((y - y₀)/Δu)
+            # getting ugly around here
+            if tmp isa Number
+                Ep[:,rr] .= tmp
+            else
+                Ep[:,rr] .= vec(tmp)
+            end
         end
     end
 
@@ -559,7 +564,25 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
 function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
-    return DimArray([convolve(x,M,Tx[ii]) for (ii,yy) in enumerate(Tx)],Tx)
+    if ndims(M) == 2 
+        return DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx)
+    elseif ndims(M) == 3
+
+        # do a sample calculation to get units.
+        Msmall = M[:,:,1]
+        yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume everything has the same units
+
+        y = DimArray(zeros(length(Tx),last(size(M)))yunit,(Tx,last(dims(M))))
+        for (ii,vv) in enumerate(last(dims(M)))
+            
+            Msmall = M[:,:,ii]
+            y[:,ii] = convolve(x,Msmall,Tx)
+
+        end
+        return y
+    else
+        error("M has wrong number of dims")
+    end
 end
 
 # function convolve(x::AbstractDimArray,F::Tuple)
