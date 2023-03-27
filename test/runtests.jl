@@ -235,7 +235,7 @@ include("test_functions.jl")
         @test within(x̃.v,x,1.0e-5)
     end
 
-    @testset "source water inversion: obs at one time, many surface regions, with circulation lag" begin
+    @testset "source water inversion: obs at one time, many surface regions, WITH CIRCULATION LAG" begin
 
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
@@ -243,11 +243,8 @@ include("test_functions.jl")
 
         nτ = 5 # how much of a lag is possible?
         lags = (0:(nτ-1))yr
-
-        # the dimensions of the state variable
         surfaceregions = [:NATL,:ANT,:SUBANT]
         years = (1990:2000)yr
-
         n = length(surfaceregions)
 
         M = source_water_matrix_with_lag(surfaceregions,lags,years)
@@ -295,15 +292,23 @@ include("test_functions.jl")
         @test cost(x̃,problem) < 5e-2 # no noise in ob
     end
 
-    @testset "source water inversion: obs timeseries, many surface regions, with circulation lag" begin
+    @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
-        yr = u"yr"
-        m = 5 # how much of a lag is possible?
-        M,x = source_water_DimArray_vector_pair_with_lag(m)
-        n = size(M,2) # surface regions
+
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        x= source_water_solution(surfaceregions,years)
+
+        # Take observations at all of these times
         Tx = first(dims(x)) #years = (1990:2000)yr
         x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
 
@@ -325,14 +330,11 @@ include("test_functions.jl")
 
         σₙ = 0.01
         σₓ = 100.0
-        #Cnndims = (first(dims(E)),first(dims(E)))
-        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
 
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
 
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
         for jj in eachindex(vec(y))
