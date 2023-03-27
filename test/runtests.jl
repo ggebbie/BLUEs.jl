@@ -241,6 +241,7 @@ include("test_functions.jl")
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
 
+        yr = u"yr"
         nτ = 5 # how much of a lag is possible?
         lags = (0:(nτ-1))yr
         surfaceregions = [:NATL,:ANT,:SUBANT]
@@ -297,7 +298,8 @@ include("test_functions.jl")
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
-
+        yr = u"yr"
+        
         nτ = 5 # how much of a lag is possible?
         lags = (0:(nτ-1))yr
         surfaceregions = [:NATL,:ANT,:SUBANT]
@@ -375,6 +377,7 @@ include("test_functions.jl")
 
         # true solution
         x= source_water_solution(surfaceregions,years)
+        Tx = first(dims(x)) 
 
         # first guess of solution 
         x₀ = DimArray(zeros(size(x))K,dims(x))
