@@ -241,8 +241,18 @@ include("test_functions.jl")
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
 
-        m = 11
-        M,x = source_water_DimArray_vector_pair_with_lag(m)
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+
+        # the dimensions of the state variable
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        x= source_water_solution(surfaceregions,years)
 
         # Run model to predict interior location temperature
         # convolve E and x
@@ -253,11 +263,7 @@ include("test_functions.jl")
 
         ## invert for y for x̃
         # Given, M and y. Make first guess for x.
-        n = size(M,2)
         # add adjustment
-        yr = u"yr"
-        years = (1990:2000)yr
-
         # DimArray is good enough. This is an array, not necessarily a matrix.
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
 
@@ -277,14 +283,11 @@ include("test_functions.jl")
         
         σₙ = 0.01
         σₓ = 100.0
-        #Cnndims = (first(dims(E)),first(dims(E)))
-        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
 
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
         @test within(y[1],getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma

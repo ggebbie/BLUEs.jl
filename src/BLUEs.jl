@@ -469,7 +469,6 @@ function impulseresponse(x₀,M)
     args:: the arguments that follow x in `funk`
 """
 function impulseresponse(funk::Function,x,args...)
-    # u = 0.0,x[:]) # error, * not available: zeros(length(x)) .* unit.(x)[:]
     u = Quantity.(zeros(length(x)),unit.(vec(x)))
     y₀ = funk(x,args...)
     #Eunits = expectedunits(y₀,x)
@@ -492,7 +491,13 @@ function impulseresponse(funk::Function,x,args...)
         if y isa AbstractDimArray
             Ep[:,rr] .= vec(parent((y - y₀)/Δu))
         else
-            Ep[:,rr] .= vec(ustrip.((y - y₀)/Δu))
+            tmp = ustrip.((y - y₀)/Δu)
+            # getting ugly around here
+            if tmp isa Number
+                Ep[:,rr] .= tmp
+            else
+                Ep[:,rr] .= vec(tmp)
+            end
         end
     end
 
