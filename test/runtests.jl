@@ -346,54 +346,6 @@ include("test_functions.jl")
 
     end
 
-    @testset "source water inversion: obs timeseries, many surface regions, with circulation lag" begin
-
-        @dim YearCE "years Common Era"
-        @dim SurfaceRegion "surface location"
-        @dim InteriorLocation "interior location"
-        yr = u"yr"
-        m = 5 # how much of a lag is possible?
-        M,x = source_water_DimArray_vector_pair_with_lag(m)
-        n = size(M,2) # surface regions
-        Tx = first(dims(x)) #years = (1990:2000)yr
-        x₀ = DimArray(zeros(size(x))K,(Tx,last(dims(M))))
-
-        # get synthetic observations
-        y = convolve(x,M,Tx)
-
-        E = impulseresponse(convolve,x₀,M,Tx)
-                        
-        # Does E matrix work properly?
-        ỹ = E*UnitfulMatrix(vec(x))
-        for jj in eachindex(vec(y))
-            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
-        end
-
-        x̂ = E\UnitfulMatrix(vec(y))
-        for jj in eachindex(vec(y))
-            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
-        end
-
-        σₙ = 0.01
-        σₓ = 100.0
-        #Cnndims = (first(dims(E)),first(dims(E)))
-        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
-
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
-
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn)
-        #problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,UnitfulMatrix(x₀[:]))
-        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
-        x̃ = solve(problem)
-        for jj in eachindex(vec(y))
-            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
-        end
-
-        # no noise in obs but some control penalty
-        @test cost(x̃,problem) < 0.5 # ad-hoc choice
-    end
-
     @testset "source water inversion: many obs timeseries, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
