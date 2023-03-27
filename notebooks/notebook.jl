@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.16
+# v0.19.14
 
 using Markdown
 using InteractiveUtils
@@ -17,8 +17,10 @@ end
 # ╔═╡ 1ccfc590-90f7-11ed-1e7c-dfaec0816597
 begin
 	ENV["UNITFUL_FANCY_EXPONENTS"] = true
-	import Pkg; Pkg.activate("../")
+	import Pkg; Pkg.activate(".")
 	#Pkg.add("PlutoUI")
+	Pkg.add("Plots")
+	
 	using BLUEs
 	using Test
 	using LinearAlgebra
@@ -42,10 +44,7 @@ md"""
 """
 
 # ╔═╡ 970a7544-c5f2-4f2e-ba52-316f67554482
-	const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; MMatrix = BestMultipliableMatrix;
-
-# ╔═╡ 72b37fc1-21fa-400c-bb3a-dec1730a9c35
-
+	const permil = u"permille"; const K = u"K"; const	K² = u"K^2"; m = u"m"; s = u"s"; 
 
 # ╔═╡ f862f30e-ea14-41a1-93ee-63d92380cd8d
 md""" 
@@ -106,7 +105,7 @@ let
 	M = 2;
 	@show σₓ = rand()
 	println()
-	E = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+	E = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
 	println("E = ")
 	display(E)
 	println()
@@ -170,7 +169,7 @@ let
 	
 	        @show y = a .+ b.*t .+ randn(numobs)m
 	
-	        E = MMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
+	        E = UnitfulMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
 			println()
 			display(E)
 			println()
@@ -215,7 +214,7 @@ begin
 		a = -0.24permil*K^-1
 		#γδ = 1.0permil^-2 # to keep units correct, have two γ (tapering) variables
 		#γT = 1.0K^-2
-		E = MMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
+		E = UnitfulMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
 		x₀ = [-1.0permil, 4.0K]
 		
 		# "overdetermined, problem 1.4" 
@@ -296,7 +295,7 @@ let
 		#M = 50
         t = (1:M)d
 
-        E = MMatrix(ustrip.(hcat(t.^0, t, t.^2, t.^3)),[g/kg,g/kg,g/kg,g/kg],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
+        E = UnitfulMatrix(ustrip.(hcat(t.^0, t, t.^2, t.^3)),[g/kg,g/kg,g/kg,g/kg],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
 
         σₙ = 0.1g/kg
         Cₙₙ = Diagonal(fill(ustrip(σₙ^2),M),fill(g/kg,M),fill(kg/g,M),exact=true)
@@ -356,7 +355,7 @@ let
         τ = range(0.0yr,5.0yr,step=0.1yr)
         ρ = exp.(-τ.^2/(1yr)^2)
         n = length(ρ)
-        Cxx = MMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),   fill(cm,n),fill(cm^-1,n),exact=true)
+        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),   fill(cm,n),fill(cm^-1,n),exact=true)
 
 		display(Cxx)
 		
@@ -365,7 +364,7 @@ let
         Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M),exact=true)
 
         Enm = sparse(1:M,1:5:n,fill(1.0,M))
-        E = MMatrix(Enm,fill(cm,M),fill(cm,n),exact=true)
+        E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n),exact=true)
 
         Cxx¹² = cholesky(Cxx)
         x₀ = zeros(n)cm
@@ -401,8 +400,8 @@ let
         M = 1
         σₓ = rand()
         # exact = false to work
-        E1 = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
-        E2 = MMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+        E1 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+        E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
         E = (one=E1,two=E2)
 
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1),exact=true)
@@ -428,10 +427,9 @@ end
 
 
 # ╔═╡ Cell order:
-# ╟─1aa4af78-f0ee-4d5a-916b-c6e0decdd300
+# ╠═1aa4af78-f0ee-4d5a-916b-c6e0decdd300
 # ╠═1ccfc590-90f7-11ed-1e7c-dfaec0816597
 # ╠═970a7544-c5f2-4f2e-ba52-316f67554482
-# ╠═72b37fc1-21fa-400c-bb3a-dec1730a9c35
 # ╠═f862f30e-ea14-41a1-93ee-63d92380cd8d
 # ╠═7dd4252c-f2d0-4839-9052-981b86e83804
 # ╠═6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
