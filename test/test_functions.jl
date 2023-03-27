@@ -83,6 +83,37 @@ function source_water_matrix_vector_pair_with_lag(M)
     return E,x
 end
 
+function source_water_solution(surfaceregions,years)
+
+    #using DimensionalData
+    #using DimensionalData: @dim
+    #cm = u"cm"
+    yr = u"yr"
+    K = u"K"
+    #percent = u"percent"
+    #surfaceregions = [:NATL,:ANT,:SUBANT]
+    #years = (1990:2000)yr
+
+    Myears = length(years)
+    N = length(surfaceregions)
+    
+    # observations have units of temperature
+    urange1 = fill(K,M)
+    urange2 = fill(K,Myears)
+    # solution also has units of temperature
+    udomain = fill(K,N)
+    Eparent = rand(M,N)#*100percent
+
+    # normalize to conserve mass
+    for nrow = 1:size(Eparent,1)
+        Eparent /= sum(Eparent)
+    end
+    
+    E = UnitfulDimMatrix(ustrip.(Eparent),urange1,udomain,dims=(Ti(lags),SurfaceRegion(surfaceregions)))
+    x = UnitfulDimMatrix(randn(Myears,N),urange2,fill(unit(1.0),N),dims=(Ti(years),SurfaceRegion(surfaceregions)))
+    return E,x
+end
+
 """
     function source_water_matrix_vector_pair_with_lag(M)
 
