@@ -293,6 +293,26 @@ include("test_functions.jl")
         @test cost(x̃,problem) < 5e-2 # no noise in ob
     end
 
+    @testset "source water inversion: obs at one time, many surface regions, with circulation lag, TWO STATE VARIABLES" begin 
+    
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        @dim StateVariable "state variable" 
+
+        #yr = u"yr"
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        statevariables = [:θ, :d18O] 
+        x = source_water_solution(surfaceregions,years, statevariables)
+    end
+
     @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
