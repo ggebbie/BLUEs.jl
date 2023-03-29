@@ -112,7 +112,7 @@ function source_water_solution(surfaceregions, years, statevar)
     permil = u"permille"
     m = length(years)
     n = length(surfaceregions)
-    mat = cat(randn(m, n, 1)permil, randn(m, n, 1)K; dims = 3)
+    mat = cat(randn(m, n, 1)K, randn(m, n, 1)permil; dims = 3)
     x = DimArray(mat, (Ti(years), SurfaceRegion(surfaceregions), StateVariable(statevar)))
     return x
 end

@@ -260,14 +260,15 @@ include("test_functions.jl")
         y = predictobs(convolve,x,M)
 
         ## invert for y for x̃
-        # Given, M and y. Make first guess for x.
+        # Given, M and y. Make first guess for x.x
         # add adjustment
         # DimArray is good enough. This is an array, not necessarily a matrix.
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
 
         # probe to get E matrix. Use function convolve
         E = impulseresponse(convolve,x₀,M)
-
+        
+        @test (E*UnitfulMatrix(vec(x₀)))[1] .== ustrip(convolve(x₀, M))
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(vec(x))
         @test isapprox(y,getindexqty(ỹ,1))
@@ -280,7 +281,8 @@ include("test_functions.jl")
         # unitful scalars in UnitfulLinearAlgebra
         
         σₙ = 0.01
-        σₓ = 100.0
+        σₓ_d18O = 100.0
+        σₓ_θ = 100.0 
 
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
@@ -311,6 +313,40 @@ include("test_functions.jl")
 
         statevariables = [:θ, :d18O] 
         x = source_water_solution(surfaceregions,years, statevariables)
+
+        #convolve(x, M, s) gives us x variables propagated to location
+        #here is a function to linearly combine those two propagated value into a single value 
+        coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+        combine(y, coeffs) = UnitfulMatrix(transpose(y)) * coeffs
+        y = combine(convolve(x, M, statevariables), coeffs)
+        #let's make one function to give to impulseresponse
+        prop_and_combine(x, M, statevariables, coeffs) = getindexqty(combine(convolve(x, M, statevariables), coeffs), 1, 1)
+        @test getindexqty(y,1,1) .== prop_and_combine(x, M, statevariables, coeffs)
+
+        x₀ = copy(x).*0
+        y₀ = convolve(x₀, M, statevariables) #seems to work
+        E = impulseresponse(prop_and_combine,x₀,M, statevariables, coeffs)
+        #does it work? 
+        @test getindexqty(E*UnitfulMatrix(vec(x₀)),1) == prop_and_combine(x₀, M, statevariables, coeffs)
+        
+        #E matrix tests from prior example
+        ỹ = E*UnitfulMatrix(vec(x))
+        @test isapprox(getindexqty(y,1,1),getindexqty(ỹ,1))
+
+        #had to get a little crafty to make this work... 
+        x̂ = E\UnitfulMatrix(parent(y), [permil], [unit(1.0)])
+        @test isapprox(getindexqty(y,1,1),getindexqty(E*x̂,1,1))
+        
+        σₙ = 0.01
+        σₓ = 100.0
+
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit(getindexqty(y, 1,1)).^1,length(y)),fill(unit(getindexqty(y,1,1)).^-1,length(y)),exact=false)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        problem = UnderdeterminedProblem(UnitfulMatrix([getindexqty(y,1,1)]), E, Cnn, Cxx, x₀)
+        x̃ = solve(problem)
+        @test within(getindexqty(y, 1,1), getindexqty(E*x̃.v, 1), 3σₙ)
+        @test cost(x̃,problem) < 5e-2
     end
 
     @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag" begin

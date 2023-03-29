@@ -2,6 +2,7 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
+using Revise
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
@@ -559,6 +560,19 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
+"""
+function convolve(x::AbstractDimArray, E::AbstractDimArray, statevars::Vector{Symbol}
+
+    This is a silly method - the info in statevars is a dimension in x
+    I can't figure out how to have one convolve method for a 2D AbstractDimArray
+    and another convolve method for a 3D AbstractDimArray
+    AbstractDimArray{Any, 3} does not work, even though I really want it to 
+"""
+function convolve(x::AbstractDimArray,E::AbstractDimArray, statevars::Vector{Symbol})
+    mat = [convolve(x[:,:,At(s)], E) for s in statevars]
+    #return DimArray(mat, statevars)
+    return mat
+end
 function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
@@ -626,5 +640,4 @@ function addcontrol!(x::AbstractDimArray,u)
     end
     return x
 end
-
 end # module
