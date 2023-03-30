@@ -371,18 +371,16 @@ include("test_functions.jl")
         Tx = first(dims(x))
         x₀ = copy(x).*0
 
-        y_ = convolve(x, M, Tx, statevariables)
+        #choose random linear coefficients 
         coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
         #function to linearly combine state variable to one variable 
         combine(y_, coeffs) = [getindexqty(UnitfulMatrix(transpose(y__))*coeffs,1,1) for y__ in y_]
-        #test! 
-        combine(y_, coeffs)
 
         #one function to hand to impulseresponse
         prop_and_combine(x, M, Tx, statevariables, coeffs) = combine(convolve(x, M, Tx, statevariables), coeffs)
-        y = prop_and_combine(x, M, Tx, statevariables, coeffs)
-        y₀ = prop_and_combine(x₀, M, Tx, statevariables, coeffs)
 
+        #synthetic timeseries 
+        y = prop_and_combine(x, M, Tx, statevariables, coeffs)
         E = impulseresponse(prop_and_combine, x₀, M, Tx, statevariables, coeffs)
 
         # Does E matrix work properly?
@@ -390,18 +388,18 @@ include("test_functions.jl")
         for jj in eachindex(vec(y))
             @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
         end
-
         x̂ = E\UnitfulMatrix(vec(y))
         for jj in eachindex(vec(y))
             @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
         end
 
+        #generate Cnn and Cxx matrices
         σₙ = 0.01
         σₓ = 100.0
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
-
         Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
 
+        #create problem and solve
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
         for jj in eachindex(vec(y))
