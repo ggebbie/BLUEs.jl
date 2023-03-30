@@ -474,12 +474,12 @@ function impulseresponse(funk::Function,x,args...)
     y₀ = funk(x,args...)
     #Eunits = expectedunits(y₀,x)
     #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
-
-    Ep = zeros(length(y₀),length(x))
+    Ep = zeros(length(y₀), length(x))
+    
     for rr in eachindex(x)
         #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
-            u = Quantity.(zeros(length(x)),unit.(vec(x)))
+            u = Quantity.(zeros(length(x)), unit.(vec(x)))
         else
             u = Quantity(0.0,unit(x))
         end
@@ -490,7 +490,9 @@ function impulseresponse(funk::Function,x,args...)
         y = funk(x₁,args...)
         #println(y)
         if y isa AbstractDimArray
-            Ep[:,rr] .= vec(parent((y - y₀)/Δu))
+            #Ep[:,rr] .= vec(parent((y - y₀)/Δu))
+            Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
+   
         else
             tmp = ustrip.((y - y₀)/Δu)
             # getting ugly around here
@@ -501,7 +503,8 @@ function impulseresponse(funk::Function,x,args...)
             end
         end
     end
-
+    
+    
     # This function could use vcat to be cleaner (but maybe slower)
     # Note: Need to add ability to return sparse matrix 
     #return E = UnitfulMatrix(Ep,unit.(vec(y₀)),unit.(vec(x)))
@@ -562,7 +565,6 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
 end
 """
 function convolve(x::AbstractDimArray, E::AbstractDimArray, statevars::Vector{Symbol}
-
     This is a silly method - the info in statevars is a dimension in x
     I can't figure out how to have one convolve method for a 2D AbstractDimArray
     and another convolve method for a 3D AbstractDimArray
@@ -577,6 +579,25 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
+# two more silly convolve function
+function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, statevars::Vector{Symbol})
+    mat = [convolve(x[:,:,At(s)], E, t) for s in statevars]
+    return mat 
+end
+#don't handle the ndims(M) == 3 case here but I'll get back to it
+function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, statevars::Vector{Symbol})
+    if ndims(M) == 2
+        return DimArray([convolve(x,M,Tx[tt], statevars) for (tt, yy) in enumerate(Tx)], Tx)
+    elseif ndims(M) == 3
+        error("some code should go here")
+    else
+        error("M has wrong number of dims") 
+    end
+    
+    
+end
+
+
 function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     if ndims(M) == 2 
         return DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx)

@@ -346,9 +346,72 @@ include("test_functions.jl")
         problem = UnderdeterminedProblem(UnitfulMatrix([getindexqty(y,1,1)]), E, Cnn, Cxx, x₀)
         x̃ = solve(problem)
         @test within(getindexqty(y, 1,1), getindexqty(E*x̃.v, 1), 3σₙ)
-        @test cost(x̃,problem) < 5e-2
+        @test cost(x̃,problem) < 5e-2        
     end
 
+    @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag, TWO STATE VARIABLES" begin
+        
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        @dim StateVariable "state variable" 
+
+        yr = u"yr"
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        statevariables = [:θ, :d18O] 
+        x = source_water_solution(surfaceregions,years, statevariables)
+
+        Tx = first(dims(x))
+        x₀ = copy(x).*0
+
+        y_ = convolve(x, M, Tx, statevariables)
+        coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+        #function to linearly combine state variable to one variable 
+        combine(y_, coeffs) = [getindexqty(UnitfulMatrix(transpose(y__))*coeffs,1,1) for y__ in y_]
+        #test! 
+        combine(y_, coeffs)
+
+        #one function to hand to impulseresponse
+        prop_and_combine(x, M, Tx, statevariables, coeffs) = combine(convolve(x, M, Tx, statevariables), coeffs)
+        y = prop_and_combine(x, M, Tx, statevariables, coeffs)
+        y₀ = prop_and_combine(x₀, M, Tx, statevariables, coeffs)
+
+        E = impulseresponse(prop_and_combine, x₀, M, Tx, statevariables, coeffs)
+
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+
+        σₙ = 0.01
+        σₓ = 100.0
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+    end
+   
     @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
