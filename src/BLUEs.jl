@@ -579,15 +579,18 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
-# two more silly convolve function
-function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, statevars::Vector{Symbol})
-    mat = [convolve(x[:,:,At(s)], E, t) for s in statevars]
-    return mat 
+
+#coeffs signifies that x is 3D 
+function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::UnitfulMatrix)
+    statevars = x.dims[3]
+    mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E, t) for s in statevars]))*coeffs
+    return getindexqty(mat, 1,1) 
 end
+
 #don't handle the ndims(M) == 3 case here but I'll get back to it
-function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, statevars::Vector{Symbol})
+function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, coeffs::UnitfulMatrix)
     if ndims(M) == 2
-        return DimArray([convolve(x,M,Tx[tt], statevars) for (tt, yy) in enumerate(Tx)], Tx)
+        return DimArray([convolve(x,M,Tx[tt], coeffs) for (tt, yy) in enumerate(Tx)], Tx)
     elseif ndims(M) == 3
         error("some code should go here")
     else

@@ -281,12 +281,11 @@ include("test_functions.jl")
         # unitful scalars in UnitfulLinearAlgebra
         
         σₙ = 0.01
-        σₓ_d18O = 100.0
-        σₓ_θ = 100.0 
+        σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ^2,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
 
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -364,15 +363,10 @@ include("test_functions.jl")
 
         #choose random linear coefficients 
         coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
-        #function to linearly combine state variable to one variable 
-        combine(y_, coeffs) = [getindexqty(UnitfulMatrix(transpose(y__))*coeffs,1,1) for y__ in y_]
-
-        #one function to hand to impulseresponse
-        prop_and_combine(x, M, Tx, statevariables, coeffs) = combine(convolve(x, M, Tx, statevariables), coeffs)
-
+                               
         #synthetic timeseries 
-        y = prop_and_combine(x, M, Tx, statevariables, coeffs)
-        E = impulseresponse(prop_and_combine, x₀, M, Tx, statevariables, coeffs)
+        y = convolve(x, M, Tx, coeffs)
+        E = impulseresponse(convolve, x₀, M, Tx,coeffs)
 
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(vec(x))
