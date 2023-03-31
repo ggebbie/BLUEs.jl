@@ -102,6 +102,19 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Est
     # show(io, mime, F.V)
 end
 
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Float64}, 3})
+    summary(io, x); println(io)
+    statevars = x.dims[3]
+    for (i, s) in enumerate(statevars)
+        if i != 1
+            println()
+        end
+        
+        println(io, "State Variable " * string(i) * ": " * string(s))
+        show(io, mime, x[:,:,At(s)])
+    end
+end
+
 """
     function getproperty(x::Estimate, d::Symbol)
 
