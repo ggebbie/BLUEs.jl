@@ -564,17 +564,17 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
 """
-function convolve(x::AbstractDimArray, E::AbstractDimArray, statevars::Vector{Symbol}
-    This is a silly method - the info in statevars is a dimension in x
-    I can't figure out how to have one convolve method for a 2D AbstractDimArray
-    and another convolve method for a 3D AbstractDimArray
-    AbstractDimArray{Any, 3} does not work, even though I really want it to 
+function convolve(x::AbstractDimArray, E::AbstractDimArray, coeffs::UnitfulMatrix}
+    the `coeffs` argument signifies that x is a 3D array (i.e. >1 state variables)
+
+    this function both convolves, and linearly combines the propagated state variables
 """
-function convolve(x::AbstractDimArray,E::AbstractDimArray, statevars::Vector{Symbol})
-    mat = [convolve(x[:,:,At(s)], E) for s in statevars]
-    #return DimArray(mat, statevars)
-    return mat
+function convolve(x::AbstractDimArray,E::AbstractDimArray, coeffs::UnitfulMatrix)
+    statevars = x.dims[3]
+    mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E) for s in statevars])) * coeffs
+    return getindexqty(mat, 1,1)
 end
+
 function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])

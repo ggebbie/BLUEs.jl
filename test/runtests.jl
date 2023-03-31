@@ -302,7 +302,7 @@ include("test_functions.jl")
         @dim InteriorLocation "interior location"
         @dim StateVariable "state variable" 
 
-        #yr = u"yr"
+        yr = u"yr"
         nτ = 5 # how much of a lag is possible?
         lags = (0:(nτ-1))yr
         surfaceregions = [:NATL,:ANT,:SUBANT]
@@ -314,38 +314,29 @@ include("test_functions.jl")
         statevariables = [:θ, :d18O] 
         x = source_water_solution(surfaceregions,years, statevariables)
 
-        #convolve(x, M, s) gives us x variables propagated to location
-        #here is a function to linearly combine those two propagated value into a single value 
         coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
-        combine(y, coeffs) = UnitfulMatrix(transpose(y)) * coeffs
-        y = combine(convolve(x, M, statevariables), coeffs)
-        #let's make one function to give to impulseresponse
-        prop_and_combine(x, M, statevariables, coeffs) = getindexqty(combine(convolve(x, M, statevariables), coeffs), 1, 1)
-        @test getindexqty(y,1,1) .== prop_and_combine(x, M, statevariables, coeffs)
-
+        y = convolve(x, M, coeffs)
+     
         x₀ = copy(x).*0
-        y₀ = convolve(x₀, M, statevariables) #seems to work
-        E = impulseresponse(prop_and_combine,x₀,M, statevariables, coeffs)
-        #does it work? 
-        @test getindexqty(E*UnitfulMatrix(vec(x₀)),1) == prop_and_combine(x₀, M, statevariables, coeffs)
+        E = impulseresponse(convolve,x₀,M,coeffs)
         
         #E matrix tests from prior example
         ỹ = E*UnitfulMatrix(vec(x))
-        @test isapprox(getindexqty(y,1,1),getindexqty(ỹ,1))
+        @test isapprox(y,getindexqty(ỹ,1))
 
         #had to get a little crafty to make this work... 
-        x̂ = E\UnitfulMatrix(parent(y), [permil], [unit(1.0)])
-        @test isapprox(getindexqty(y,1,1),getindexqty(E*x̂,1,1))
+        x̂ = E\UnitfulMatrix(reshape([ustrip.(y)], (1,1)), [permil], [unit(1.0)])
+        @test isapprox(y,getindexqty(E*x̂,1,1))
         
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit(getindexqty(y, 1,1)).^1,length(y)),fill(unit(getindexqty(y,1,1)).^-1,length(y)),exact=false)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),fill(unit(y).^1,length(y)),fill(unit(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
-        problem = UnderdeterminedProblem(UnitfulMatrix([getindexqty(y,1,1)]), E, Cnn, Cxx, x₀)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]), E, Cnn, Cxx, x₀)
         x̃ = solve(problem)
-        @test within(getindexqty(y, 1,1), getindexqty(E*x̃.v, 1), 3σₙ)
+        @test within(y, getindexqty(E*x̃.v, 1), 3σₙ)
         @test cost(x̃,problem) < 5e-2        
     end
 
@@ -396,8 +387,8 @@ include("test_functions.jl")
         #generate Cnn and Cxx matrices
         σₙ = 0.01
         σₓ = 100.0
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
 
         #create problem and solve
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
