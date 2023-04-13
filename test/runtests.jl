@@ -336,7 +336,8 @@ include("test_functions.jl")
         problem = UnderdeterminedProblem(UnitfulMatrix([y]), E, Cnn, Cxx, x₀)
         x̃ = solve(problem)
         @test within(y, getindexqty(E*x̃.v, 1), 3σₙ)
-        @test cost(x̃,problem) < 5e-2        
+        @test cost(x̃,problem) < 5e-2
+        @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
     end
 
     @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag, TWO STATE VARIABLES" begin
@@ -447,6 +448,9 @@ include("test_functions.jl")
 
         # no noise in obs but some control penalty
         @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+        @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
+
 
     end
 
