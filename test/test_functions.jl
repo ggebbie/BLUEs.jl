@@ -44,6 +44,41 @@ function random_source_water_matrix_vector_pair(M)
 end
 
 """
+    function random_source_water_matrix(M)
+
+    M: number of interior locations, observations
+
+    return E
+"""
+function random_source_water_matrix(M)
+
+    #using DimensionalData
+    #using DimensionalData: @dim
+    #cm = u"cm"
+    yr = u"yr"
+    K = u"K"
+    percent = u"percent"
+    surfaceregions = [:NATL,:ANT,:SUBANT]
+    interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:M]
+    N = length(surfaceregions)
+    
+    # observations have units of temperature
+    urange = fill(K,M)
+    # solution also has units of temperature
+    udomain = fill(K,N)
+    Eparent = rand(M,N)#*100percent
+
+    # normalize to conserve mass
+    for nrow = 1:size(Eparent,1)
+        Eparent[nrow,:] ./= sum(Eparent[nrow,:])
+    end
+    
+    E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs), SurfaceRegion(surfaceregions)))
+
+    return E
+end
+
+"""
     function random_source_water_matrix_vector_pair_with_lag(M)
 
     M: number of interior locations, observations
