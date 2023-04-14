@@ -359,13 +359,13 @@ include("test_functions.jl")
         years = (1990:2000)yr
         n = length(surfaceregions)
 
-        M = DimArray(random_source_water_matrix(5))
+        M = DimArray(random_source_water_matrix(1))
 
         x= transpose(source_water_solution(surfaceregions,years)) #true solution
         y = M* x #synthetic observation
         x₀ = x * 0 #first guess
 
-       E = impulseresponse(flipped_mult,x₀,M)
+        E = impulseresponse(flipped_mult,x₀,M)
                         
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(vec(x))
