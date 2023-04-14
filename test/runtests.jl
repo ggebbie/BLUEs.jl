@@ -348,6 +348,56 @@ include("test_functions.jl")
 
     end
 
+    @testset "source water inversion: one obs TIMESERIES, many surface regions, with NO circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+   
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = DimArray(random_source_water_matrix(5))
+
+        x= transpose(source_water_solution(surfaceregions,years)) #true solution
+        y = M* x #synthetic observation
+        x₀ = x * 0 #first guess
+
+       E = impulseresponse(flipped_mult,x₀,M)
+                        
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+
+        σₙ = 0.01
+        σₓ = 100.0
+
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        # no noise in obs but some control penalty
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+    end
+
+    
+
     @testset "source water inversion: MANY OBS TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
@@ -435,14 +485,11 @@ include("test_functions.jl")
         M = DimArray(random_source_water_matrix(5))
 
         # true solution - Ti x SurfaceRegion
-        x= source_water_solution(surfaceregions,years)
-        x = DimArray(transpose(Matrix(x)), (SurfaceRegion(surfaceregions), Ti(years)))
+        x= transpose(source_water_solution(surfaceregions,years))
         y = M*x #5 x 11 
         # first guess of solution 
         x₀ = rebuild(x, zeros(size(x))K)
 
-        #problem: impulseresponse needs x argument first 
-        flipped_mult(a,b) = b * a 
         #M ⋅ x = (5 × 11) matrix. What E matrix will give us (55 × 1) output? 
         E = impulseresponse(flipped_mult, x₀, M)
 

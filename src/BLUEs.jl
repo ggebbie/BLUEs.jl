@@ -6,7 +6,7 @@ using DimensionalData
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
 export expectedunits, impulseresponse, convolve
-export predictobs, addcontrol, addcontrol!
+export predictobs, addcontrol, addcontrol!, flipped_mult
 
 import Base: show, getproperty, propertynames, (*), (+), (-), sum
 #import Base.:*
@@ -626,5 +626,13 @@ function addcontrol!(x::AbstractDimArray,u)
     end
     return x
 end
+
+
+"""
+function flipped_mult
+
+    multiply in opposite order given, needs to be defined for impulseresponse
+"""
+flipped_mult(a,b) = b*a
 
 end # module
