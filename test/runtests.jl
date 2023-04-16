@@ -260,14 +260,15 @@ include("test_functions.jl")
         y = predictobs(convolve,x,M)
 
         ## invert for y for x̃
-        # Given, M and y. Make first guess for x.
+        # Given, M and y. Make first guess for x.x
         # add adjustment
         # DimArray is good enough. This is an array, not necessarily a matrix.
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
 
         # probe to get E matrix. Use function convolve
         E = impulseresponse(convolve,x₀,M)
-
+        
+        @test (E*UnitfulMatrix(vec(x₀)))[1] .== ustrip(convolve(x₀, M))
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(vec(x))
         @test isapprox(y,getindexqty(ỹ,1))
@@ -282,9 +283,9 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ^2,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
 
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -293,7 +294,109 @@ include("test_functions.jl")
         @test cost(x̃,problem) < 5e-2 # no noise in ob
     end
 
-    @testset "source water inversion: one obs TIMESERIES, many surface regions, with circulation lag" begin
+    @testset "source water inversion: obs at one time, many surface regions, with circulation lag, TWO STATE VARIABLES" begin 
+    
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        @dim StateVariable "state variable" 
+
+        yr = u"yr"
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        statevariables = [:θ, :d18O] 
+        x = source_water_solution(surfaceregions,years, statevariables)
+
+        coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+        y = convolve(x, M, coeffs)
+     
+        x₀ = copy(x).*0
+        E = impulseresponse(convolve,x₀,M,coeffs)
+        
+        #E matrix tests from prior example
+        ỹ = E*UnitfulMatrix(vec(x))
+        @test isapprox(y,getindexqty(ỹ,1))
+
+        #had to get a little crafty to make this work... 
+        x̂ = E\UnitfulMatrix(reshape([ustrip.(y)], (1,1)), [permil], [unit(1.0)])
+        @test isapprox(y,getindexqty(E*x̂,1,1))
+        
+        σₙ = 0.01
+        σₓ = 100.0
+
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),fill(unit(y).^1,length(y)),fill(unit(y).^-1,length(y)),exact=false)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        problem = UnderdeterminedProblem(UnitfulMatrix([y]), E, Cnn, Cxx, x₀)
+        x̃ = solve(problem)
+        @test within(y, getindexqty(E*x̃.v, 1), 3σₙ)
+        @test cost(x̃,problem) < 5e-2
+        @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
+    end
+
+    @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag, TWO STATE VARIABLES" begin
+        
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        @dim StateVariable "state variable" 
+
+        yr = u"yr"
+        nτ = 5 # how much of a lag is possible?
+        lags = (0:(nτ-1))yr
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = source_water_matrix_with_lag(surfaceregions,lags,years)
+
+        statevariables = [:θ, :d18O] 
+        x = source_water_solution(surfaceregions,years, statevariables)
+
+        Tx = first(dims(x))
+        x₀ = copy(x).*0
+
+        #choose random linear coefficients 
+        coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+                               
+        #synthetic timeseries 
+        y = convolve(x, M, Tx, coeffs)
+        E = impulseresponse(convolve, x₀, M, Tx,coeffs)
+
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+
+        #generate Cnn and Cxx matrices
+        σₙ = 0.01
+        σₓ = 100.0
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        #create problem and solve
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+    end
+   
+    @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
@@ -345,6 +448,9 @@ include("test_functions.jl")
 
         # no noise in obs but some control penalty
         @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+        @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
+
 
     end
 
