@@ -2,6 +2,7 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
+using Revise
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
@@ -99,6 +100,19 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Est
     # show(io, mime, F.S)
     # println(io, "\nV (right singular vectors):")
     # show(io, mime, F.V)
+end
+
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Float64}, 3})
+    summary(io, x); println(io)
+    statevars = x.dims[3]
+    for (i, s) in enumerate(statevars)
+        if i != 1
+            println()
+        end
+        
+        println(io, "State Variable " * string(i) * ": " * string(s))
+        show(io, mime, x[:,:,At(s)])
+    end
 end
 
 """
@@ -473,12 +487,12 @@ function impulseresponse(funk::Function,x,args...)
     y₀ = funk(x,args...)
     #Eunits = expectedunits(y₀,x)
     #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
-
-    Ep = zeros(length(y₀),length(x))
+    Ep = zeros(length(y₀), length(x))
+    
     for rr in eachindex(x)
         #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
-            u = Quantity.(zeros(length(x)),unit.(vec(x)))
+            u = Quantity.(zeros(length(x)), unit.(vec(x)))
         else
             u = Quantity(0.0,unit(x))
         end
@@ -489,7 +503,9 @@ function impulseresponse(funk::Function,x,args...)
         y = funk(x₁,args...)
         #println(y)
         if y isa AbstractDimArray
-            Ep[:,rr] .= vec(parent((y - y₀)/Δu))
+            #Ep[:,rr] .= vec(parent((y - y₀)/Δu))
+            Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
+   
         else
             tmp = ustrip.((y - y₀)/Δu)
             # getting ugly around here
@@ -500,7 +516,8 @@ function impulseresponse(funk::Function,x,args...)
             end
         end
     end
-
+    
+    
     # This function could use vcat to be cleaner (but maybe slower)
     # Note: Need to add ability to return sparse matrix 
     #return E = UnitfulMatrix(Ep,unit.(vec(y₀)),unit.(vec(x)))
@@ -559,10 +576,44 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
+"""
+function convolve(x::AbstractDimArray, E::AbstractDimArray, coeffs::UnitfulMatrix}
+    the `coeffs` argument signifies that x is a 3D array (i.e. >1 state variables)
+
+    this function both convolves, and linearly combines the propagated state variables
+"""
+function convolve(x::AbstractDimArray,E::AbstractDimArray, coeffs::UnitfulMatrix)
+    statevars = x.dims[3]
+    mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E) for s in statevars])) * coeffs
+    return getindexqty(mat, 1,1)
+end
+
 function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))
     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
+
+#coeffs signifies that x is 3D 
+function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::UnitfulMatrix)
+    statevars = x.dims[3]
+    mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E, t) for s in statevars]))*coeffs
+    return getindexqty(mat, 1,1) 
+end
+
+#don't handle the ndims(M) == 3 case here but I'll get back to it
+function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, coeffs::UnitfulMatrix)
+    if ndims(M) == 2
+        return DimArray([convolve(x,M,Tx[tt], coeffs) for (tt, yy) in enumerate(Tx)], Tx)
+    elseif ndims(M) == 3
+        error("some code should go here")
+    else
+        error("M has wrong number of dims") 
+    end
+    
+    
+end
+
+
 function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     if ndims(M) == 2 
         return DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx)
@@ -626,5 +677,4 @@ function addcontrol!(x::AbstractDimArray,u)
     end
     return x
 end
-
 end # module
