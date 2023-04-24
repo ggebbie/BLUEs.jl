@@ -199,7 +199,7 @@ include("test_functions.jl")
         # contaminate observations, check if error bars are correct
     end
 
-    @testset "source water inversion: obs at one time, no circulation lag" begin
+    @testset "source water inversion: multiple obs at one time, many surface regions, no circulation lag" begin
 
         #using DimensionalData
         #using DimensionalData: @dim
@@ -235,7 +235,7 @@ include("test_functions.jl")
         @test within(x̃.v,x,1.0e-5)
     end
 
-    @testset "source water inversion: obs at one time, many surface regions, WITH CIRCULATION LAG" begin
+    @testset "source water inversion: one obs at one time, many surface regions, WITH CIRCULATION LAG" begin
 
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
@@ -454,6 +454,56 @@ include("test_functions.jl")
 
     end
 
+    @testset "source water inversion: one obs TIMESERIES, many surface regions, with NO circulation lag" begin
+
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+   
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+        n = length(surfaceregions)
+
+        M = DimArray(random_source_water_matrix(1))
+
+        x= transpose(source_water_solution(surfaceregions,years)) #true solution
+        y = M* x #synthetic observation
+        x₀ = x * 0 #first guess
+
+        E = impulseresponse(flipped_mult,x₀,M)
+                        
+        # Does E matrix work properly?
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+
+        σₙ = 0.01
+        σₓ = 100.0
+
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        # no noise in obs but some control penalty
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+
+    end
+
+    
+
     @testset "source water inversion: MANY OBS TIMESERIES, many surface regions, with circulation lag" begin
 
         @dim YearCE "years Common Era"
@@ -513,6 +563,62 @@ include("test_functions.jl")
 
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
+        for jj in eachindex(vec(y))
+            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
+        end
+
+        # no noise in obs but some control penalty
+        @test cost(x̃,problem) < 0.5 # ad-hoc choice
+    end
+
+    @testset "source water inversion: MANY OBS TIMESERIES, many surface regions, with no circulation lag" begin
+        
+        @dim YearCE "years Common Era"
+        @dim SurfaceRegion "surface location"
+        @dim InteriorLocation "interior location"
+        yr = u"yr"
+
+        m = 6 # how many observational locations?
+        interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:m]
+
+        # the dimensions of the state variable
+        surfaceregions = [:NATL,:ANT,:SUBANT]
+        years = (1990:2000)yr
+
+        n = length(surfaceregions)
+
+        #Dimensions = InteriorLocation x SurfaceRegion
+        M = DimArray(random_source_water_matrix(5))
+
+        # true solution - Ti x SurfaceRegion
+        x= transpose(source_water_solution(surfaceregions,years))
+        y = M*x #5 x 11 
+        # first guess of solution 
+        x₀ = rebuild(x, zeros(size(x))K)
+
+        #M ⋅ x = (5 × 11) matrix. What E matrix will give us (55 × 1) output? 
+        E = impulseresponse(flipped_mult, x₀, M)
+
+        ỹ = E*UnitfulMatrix(vec(x))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
+        end
+        
+        x̂ = E\UnitfulMatrix(vec(y))
+        for jj in eachindex(vec(y))
+            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
+        end
+        
+        σₙ = 0.01
+        σₓ = 100.0
+
+        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+
+        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
+        x̃ = solve(problem)
+        
         for jj in eachindex(vec(y))
             @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
         end
