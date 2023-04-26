@@ -40,8 +40,7 @@ include("test_functions.jl")
             σₓ = rand()
             # exact = false to work
             E = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
-            # NOTE: unitrange, unitdomain have different units. requires kludge below.
-            Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,exact=true)
+            Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E))
             x = UnitfulMatrix(randn(N)m)
             y = E*x
 
@@ -67,7 +66,7 @@ include("test_functions.jl")
         y = UnitfulMatrix(a .+ b.*t .+ randn(M)m)
 
         E = UnitfulMatrix(hcat(ones(M),ustrip.(t)),fill(m,M),[m,m/s],exact=true)
-        Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M),exact=true)
+        Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M))
 
         problem = OverdeterminedProblem(y,E,Cnn⁻¹)
         x̃ = solve(problem,alg=:textbook)
@@ -86,13 +85,13 @@ include("test_functions.jl")
         x₀ = UnitfulMatrix([-1.0permil, 4.0K])
 
         # "overdetermined, problem 1.4" 
-        Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K],exact=true)
+        Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K])
 	Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
         oproblem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
 
         # "underdetermined, problem 2.1" 
 	Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
-        Cxx = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1],exact=true)
+        Cxx = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1])
         uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
 
         x̃1 = solve(oproblem)
@@ -114,14 +113,14 @@ include("test_functions.jl")
         E = UnitfulMatrix(Eparent,fill(g/kg,M),[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
 
         σₙ = 0.1g/kg
-        Cₙₙ = Diagonal(fill(ustrip(σₙ^2),M),fill(g/kg,M),fill(kg/g,M),exact=true) 
+        Cₙₙ = Diagonal(fill(ustrip(σₙ^2),M),fill(g/kg,M),fill(kg/g,M)) 
         Cₙₙ¹² = cholesky(Cₙₙ)
-        Cₙₙ⁻¹ = Diagonal(fill(ustrip(σₙ^-2),M),fill(kg/g,M),fill(g/kg,M),exact=true) 
+        Cₙₙ⁻¹ = Diagonal(fill(ustrip(σₙ^-2),M),fill(kg/g,M),fill(g/kg,M)) 
         Cₙₙ⁻¹² = cholesky(Cₙₙ⁻¹)
 
 	γ = [1.0e1kg^2/g^2, 1.0e2kg^2*d^2/g^2, 1.0e3kg^2*d^4/g^2, 1.0e4kg^2*d^6/g^2]
 
-	Cxx⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
+	Cxx⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
         Cxx = inv(Cxx⁻¹)
         Cxx¹² = cholesky(Cxx)
 
@@ -147,11 +146,11 @@ include("test_functions.jl")
         τ = range(0.0yr,5.0yr,step=0.1yr)
         ρ = exp.(-τ.^2/(1yr)^2)
         n = length(ρ)
-        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),   fill(cm,n),fill(cm^-1,n),exact=true)
+        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),   fill(cm,n),fill(cm^-1,n))
 
         M = 11
         σₙ = 0.1cm
-        Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M),exact=true)
+        Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M))
 
         Enm = sparse(1:M,1:5:n,fill(1.0,M))
         E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n),exact=true)
@@ -178,7 +177,7 @@ include("test_functions.jl")
         E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
         E = (one=E1,two=E2)
 
-        Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1).^1,exact=true)
+        Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1))
 
         Cnn⁻¹ = (one=Cnn⁻¹1, two =Cnn⁻¹1)
         x = UnitfulMatrix(randn(N)m) 

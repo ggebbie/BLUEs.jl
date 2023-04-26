@@ -452,9 +452,7 @@ version = "1.12.4"
 
 [[deps.UnitfulLinearAlgebra]]
 deps = ["DimensionalData", "LinearAlgebra", "SparseArrays", "Statistics", "Unitful"]
-git-tree-sha1 = "0957bedc8b5a8a77506f5c208426ab3832fafdc9"
-repo-rev = "main"
-repo-url = "https://github.com/ggebbie/UnitfulLinearAlgebra.jl"
+path = "/home/gebbie/projects/UnitfulLinearAlgebra.jl/"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 version = "0.1.0"
 
