@@ -146,14 +146,14 @@ include("test_functions.jl")
         τ = range(0.0yr,5.0yr,step=0.1yr)
         ρ = exp.(-τ.^2/(1yr)^2)
         n = length(ρ)
-        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),   fill(cm,n),fill(cm^-1,n))
+        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),fill(cm,n),fill(cm^-1,n))
 
         M = 11
         σₙ = 0.1cm
         Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M))
 
         Enm = sparse(1:M,1:5:n,fill(1.0,M))
-        E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n),exact=true)
+        E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n))
 
         Cxx¹² = cholesky(Cxx)
         x₀ = UnitfulMatrix(zeros(n)cm)
@@ -173,8 +173,8 @@ include("test_functions.jl")
         M = 1
         σₓ = rand()
         # exact = false to work
-        E1 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
-        E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+        E1 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N))
+        E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N))
         E = (one=E1,two=E2)
 
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1))
@@ -222,8 +222,7 @@ include("test_functions.jl")
 
         σₙ = 1.0
         Cnndims = (first(dims(E)),first(dims(E)))
-        #Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
-        Cnn⁻¹ = UnitfulDimMatrix(Diagonal(fill(σₙ^-1,M)),unitrange(E).^-1,unitrange(E).^1,dims=Cnndims,exact=true)
+        Cnn⁻¹ = Diagonal(fill(σₙ^-1,M),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
 
         problem = OverdeterminedProblem(y,E,Cnn⁻¹)
         x̃ = solve(problem,alg=:hessian)
@@ -282,9 +281,13 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ^2,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
+        # Cnn = UnitfulMatrix(Diagonal(fill(σₙ^2,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        # Cxx = UnitfulMatrix(Diagonal(fill(σₓ^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+
+        Cnn = Diagonal(fill(σₙ^2,length(y)),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
+
+        Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
 
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -331,7 +334,7 @@ include("test_functions.jl")
 
         Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),fill(unit(y).^1,length(y)),fill(unit(y).^-1,length(y)),exact=false)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
+        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
         problem = UnderdeterminedProblem(UnitfulMatrix([y]), E, Cnn, Cxx, x₀)
         x̃ = solve(problem)
         @test within(y, getindexqty(E*x̃.v, 1), 3σₙ)
@@ -381,8 +384,9 @@ include("test_functions.jl")
         #generate Cnn and Cxx matrices
         σₙ = 0.01
         σₓ = 100.0
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        # annoying due to scalar
+        Cnn = Diagonal(fill(σₙ.^2,length(y)),vec(unit.(y)).^1,vec(unit.(y)).^-1)
+        Cxx = Diagonal(fill(σₓ.^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
 
         #create problem and solve
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
@@ -435,9 +439,9 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cnn = Diagonal(fill(σₙ,length(y)),vec(unit.(y)).^1,vec(unit.(y)).^-1)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        Cxx = Diagonal(fill(σₓ,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
 
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -486,9 +490,9 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cnn = Diagonal(fill(σₙ,length(y)),vec(unit.(y)),vec(unit.(y)).^-1)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        Cxx = Diagonal(fill(σₓ,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
 
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -556,9 +560,9 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cnn = Diagonal(fill(σₙ,length(y)),vec(unit.(y)),vec(unit.(y)).^-1)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        Cxx = Diagonal(fill(σₓ,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
 
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
@@ -611,9 +615,9 @@ include("test_functions.jl")
         σₙ = 0.01
         σₓ = 100.0
 
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),vec(unit.(y)).^1,vec(unit.(y)).^-1,exact=true)
+        Cnn = Diagonal(fill(σₙ.^2,length(y)),vec(unit.(y)),vec(unit.(y)).^-1)
 
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=true)
+        Cxx = Diagonal(fill(σₓ.^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
 
         problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
         x̃ = solve(problem)
