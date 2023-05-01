@@ -138,4 +138,18 @@ function source_water_DimArray_vector_pair_with_lag(M)
     M = DimArray(Eparent,(Ti(lags),SurfaceRegion(surfaceregions)))
     x = DimArray(randn(Myears,N)K,(Ti(years),SurfaceRegion(surfaceregions)))
     return M,x
+        
 end
+
+function synthetic_timeseries(obs, t_obs, σ_obs, t_om, ρ, u)
+    n = length(obs)
+    m = length(t_om)
+    Cnn = Diagonal(fill(ustrip(σ_obs), n), fill(u, n), fill(u^-1, n), exact = true)
+    Cxx = UnitfulMatrix(SymmetricToeplitz(ρ), fill(u, m), fill(u^-1, m), exact = true) + Diagonal(fill(1e-6, m), fill(u, m), fill(u^-1, m), exact = true)
+    Enm = sparse(1:n, findall(x->x∈t_obs, t_om), fill(1.0, n))
+    E = UnitfulMatrix(Enm, fill(u, n), fill(u, m), exact = true)
+    x₀ = UnitfulMatrix(ones(m) .* mean(obs))
+    x̃ = solve(UnderdeterminedProblem(obs, E, Cnn, Cxx, x₀))
+    return x̃           
+end
+
