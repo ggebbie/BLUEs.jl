@@ -22,14 +22,23 @@ include("test_functions.jl")
         covmat = abs.(randn((10,10)))
         
         e = Estimate(estmat, covmat)
-        de = DimEstimate(estmat, covmat, (X(1:5), Y(1:2)))
+        de = DimEstimate(estmat, covmat, (X(1:10), Y([1])))
         
         multby = randn(1, 10)
-        udm = UnitfulDimMatrix(frontmultby, fill(unit(1.0), 1), fill(unit(1.0), 10), dims = (Ti = [1], X = 1:10))
+        um = UnitfulMatrix(multby, fill(1., 1), fill(unit(1.), 10))
 
+        multby * e
         @test isapprox((multby * e).v, multby * estmat)
         @test isapprox((multby * e).σ[1,1]^2, (multby * covmat * multby')[1])
-        
+
+        @test isapprox(ustrip.((um * de).v)[1], multby * estmat)
+        #UnitfulDimMatrix
+        #x = udm * de
+        #udm * de.v
+        um * UnitfulMatrix(de.v)
+        #udm * de.C * transpose(udm)
+        um * de.C * transpose(um)
+        um*de
     end
     
 
