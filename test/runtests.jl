@@ -1,4 +1,4 @@
-#using Revise
+using Revise
 using BLUEs
 using Test
 using LinearAlgebra
@@ -16,6 +16,22 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
 include("test_functions.jl")
 
 @testset "BLUEs.jl" begin
+
+    @testset "Estimate" begin
+        estmat = randn(10)
+        covmat = abs.(randn((10,10)))
+        
+        e = Estimate(estmat, covmat)
+        de = DimEstimate(estmat, covmat, (X(1:5), Y(1:2)))
+        
+        multby = randn(1, 10)
+        udm = UnitfulDimMatrix(frontmultby, fill(unit(1.0), 1), fill(unit(1.0), 10), dims = (Ti = [1], X = 1:10))
+
+        @test isapprox((multby * e).v, multby * estmat)
+        @test isapprox((multby * e).σ[1,1]^2, (multby * covmat * multby')[1])
+        
+    end
+    
 
     @testset "error propagation" begin
 
