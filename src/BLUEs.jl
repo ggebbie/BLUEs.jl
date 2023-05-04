@@ -333,7 +333,8 @@ end
     error propagation.
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
-*(F::AbstractMatrix,x::DimEstimate) = DimEstimate(F*x.v,F*x.C*transpose(F),x.dims)
+*(F::UnitfulDimMatrix,x::DimEstimate) = DimEstimate(F*x.v,F*x.C*transpose(F),x.dims)
+*(F::UnitfulMatrix,x::DimEstimate) = Estimate(F*x.v,F*x.C*transpose(F))
 
 """    
     Matrix addition for Estimate includes
@@ -341,6 +342,7 @@ end
     Recursive Least Squares, "Dynamical Insights from Data" class notes
 """
 +(x::Estimate,y::Estimate) = error("not implemented yet")
++(x::DimEstimate,y::DimEstimate) = error("not implemented yet")
 
 """
     Compute cost function

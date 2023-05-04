@@ -231,91 +231,84 @@ include("test_functions.jl")
 
     @testset "source water inversion: one obs at one time, many surface regions, WITH CIRCULATION LAG" begin
 
-        include("config_source_water_inversion.jl")
+        cases = ((false,false),(true,false),(true,true))
+        for (statevars,timeseries) in cases
+            include("config_source_water_inversion.jl")
 
-        ## invert for y for x̃
-        # Given, M and y. Make first guess for x.x
-        # add adjustment
-        # DimArray is good enough. This is an array, not necessarily a matrix.
-        x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
+            # Step 1: get synthetic solution
+            if !statevars
 
-        # probe to get E matrix. Use function convolve
-        E = impulseresponse(convolve,x₀,M) #::UnitfulMatrix
-        
-        @test vec(E*UnitfulMatrix(vec(x₀)))[1] .== convolve(x₀, M)
-        # Does E matrix work properly?
-        ỹ = E*UnitfulMatrix(vec(x))
-        @test isapprox(y,vec(ỹ)[1])
+                # don't think timeseries is possible.
+                M = source_water_matrix_with_lag(surfaceregions,lags,years)
+                x= source_water_solution(surfaceregions,years)
+                # DimArray is good enough. This is an array, not necessarily a matrix.
+                x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
 
-        x̂ = E\y
-        @test isapprox(y,vec(E*x̂)[1])
+            elseif statevars
 
-        # now in a position to use BLUEs to solve
-        # should handle matrix left divide with
-        # unitful scalars in UnitfulLinearAlgebra
-        
-        σₙ = 0.01
-        σₓ = 100.0
-        Cnn = Diagonal(fill(σₙ^2,length(y)),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
-        Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
+                M = source_water_matrix_with_lag(surfaceregions,lags,years)
+                statevariables = [:θ, :δ¹⁸O] 
+                x = source_water_solution(surfaceregions,years, statevariables)
 
-        # Julia doesn't have method to make scalar into vector
-        # keep [y] notation for consistency
-        problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
+                coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+                x₀ = copy(x).*0
 
-        # when x₀ is a DimArray, then x̃ is a DimEstimate
-        x̃ = solve(problem)
-        @test within(y[1],getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
+            else
+                error("no case")
+            end
 
-        @test cost(x̃,problem) < 5e-2 # no noise in ob
+            # Step 2: get observational operator.
+            if timeseries && statevars
+                global predict(x) = convolve(x,M,Tx,coeffs)
+                #E = impulseresponse(convolve,x₀,M,Tx,coeffs)
+            elseif statevars
+                global predict(x) = convolve(x,M,coeffs)
+            elseif timeseries
+                error("probably doesn't work")
+                # probably doesn't work, ambiguous
+            #    predict(x) = convolve(x,M,Tx)
+            else
+                global predict(x) = convolve(x,M)
+            end
+
+            E = impulseresponse(predict,x₀)
+
+            # convolve E and x
+            # Given, M and y. Make first guess for x.x
+            # probe to get E matrix. Use function convolve
+            println("Synthetic data")
+            y = predict(x)
+
+            # test compatibility
+            @test first(E*UnitfulMatrix(vec(x₀))) .== first(predict(x₀))
+            
+            # Does E matrix work properly?
+            ỹ = E*UnitfulMatrix(vec(x))
+            @test isapprox(first(y),first(ỹ))
+
+            x̂ = E\y
+            @test isapprox(first(y),first(E*x̂))
+
+            # now in a position to use BLUEs to solve
+            σₙ = 0.01
+            σₓ = 100.0
+
+            # not so elegant,
+            # Julia doesn't have method to make scalar into vector
+            !(y isa AbstractVector) && (y = [y])
+            Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1,exact=false)
+            Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
+
+            # keep [y] notation for consistency
+            problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
+
+            # when x₀ is a DimArray, then x̃ is a DimEstimate
+            x̃ = solve(problem)
+            @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
+            @test cost(x̃,problem) < 5e-2 # no noise in ob
+        end
     end
-
-    @testset "source water inversion: obs at one time, many surface regions, with circulation lag, TWO STATE VARIABLES" begin 
     
-        @dim YearCE "years Common Era"
-        @dim SurfaceRegion "surface location"
-        @dim InteriorLocation "interior location"
-        @dim StateVariable "state variable" 
-
-        yr = u"yr"
-        nτ = 5 # how much of a lag is possible?
-        lags = (0:(nτ-1))yr
-        surfaceregions = [:NATL,:ANT,:SUBANT]
-        years = (1990:2000)yr
-        n = length(surfaceregions)
-
-        M = source_water_matrix_with_lag(surfaceregions,lags,years)
-
-        statevariables = [:θ, :d18O] 
-        x = source_water_solution(surfaceregions,years, statevariables)
-
-        coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
-        y = convolve(x, M, coeffs)
-     
-        x₀ = copy(x).*0
-        E = impulseresponse(convolve,x₀,M,coeffs)
-        
-        #E matrix tests from prior example
-        ỹ = E*UnitfulMatrix(vec(x))
-        @test isapprox(y,getindexqty(ỹ,1))
-
-        #had to get a little crafty to make this work... 
-        x̂ = E\UnitfulMatrix(reshape([ustrip.(y)], (1,1)), [permil], [unit(1.0)])
-        @test isapprox(y,getindexqty(E*x̂,1,1))
-        
-        σₙ = 0.01
-        σₓ = 100.0
-
-        Cnn = UnitfulMatrix(Diagonal(fill(σₙ.^2,length(y))),fill(unit(y).^1,length(y)),fill(unit(y).^-1,length(y)),exact=false)
-
-        Cxx = UnitfulMatrix(Diagonal(fill(σₓ.^2,length(x₀))),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
-        problem = UnderdeterminedProblem(UnitfulMatrix([y]), E, Cnn, Cxx, x₀)
-        x̃ = solve(problem)
-        @test within(y, getindexqty(E*x̃.v, 1), 3σₙ)
-        @test cost(x̃,problem) < 5e-2
-        @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
-    end
-
     @testset "source water inversion: obs TIMESERIES, many surface regions, with circulation lag, TWO STATE VARIABLES" begin
         
         @dim YearCE "years Common Era"
