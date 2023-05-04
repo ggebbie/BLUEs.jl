@@ -194,14 +194,11 @@ include("test_functions.jl")
         @test cost(x̃,problem) < 1e-5 # no noise in obs
 
         #@test x ≈ pinv(problem) * y # inefficient way to solve problem
-
         # contaminate observations, check if error bars are correct
     end
 
     @testset "source water inversion: multiple obs at one time, many surface regions, no circulation lag" begin
 
-        #using DimensionalData
-        #using DimensionalData: @dim
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
@@ -210,8 +207,7 @@ include("test_functions.jl")
         E,x = random_source_water_matrix_vector_pair(M)
 
         # Run model to predict interior location temperature
-        #y = uconvert.(K,E*x)
-        y = E*x
+        y = E*x # E::UnitfulDimMatrix
 
         # do slices work?
         E[At(:loc1),At(:NATL)]
@@ -235,27 +231,7 @@ include("test_functions.jl")
 
     @testset "source water inversion: one obs at one time, many surface regions, WITH CIRCULATION LAG" begin
 
-        @dim YearCE "years Common Era"
-        @dim SurfaceRegion "surface location"
-        @dim InteriorLocation "interior location"
-
-        yr = u"yr"
-        nτ = 5 # how much of a lag is possible?
-        lags = (0:(nτ-1))yr
-        surfaceregions = [:NATL,:ANT,:SUBANT]
-        years = (1990:2000)yr
-        n = length(surfaceregions)
-
-        M = source_water_matrix_with_lag(surfaceregions,lags,years)
-
-        x= source_water_solution(surfaceregions,years)
-
-        # Run model to predict interior location temperature
-        # convolve E and x
-        y = convolve(x,M)
-
-        # could also use this format
-        y = predictobs(convolve,x,M)
+        include("config_source_water_inversion.jl")
 
         ## invert for y for x̃
         # Given, M and y. Make first guess for x.x
@@ -264,15 +240,15 @@ include("test_functions.jl")
         x₀ = DimArray(zeros(size(x))K,(Ti(years),last(dims(M))))
 
         # probe to get E matrix. Use function convolve
-        E = impulseresponse(convolve,x₀,M)
+        E = impulseresponse(convolve,x₀,M) #::UnitfulMatrix
         
-        @test (E*UnitfulMatrix(vec(x₀)))[1] .== ustrip(convolve(x₀, M))
+        @test vec(E*UnitfulMatrix(vec(x₀)))[1] .== convolve(x₀, M)
         # Does E matrix work properly?
         ỹ = E*UnitfulMatrix(vec(x))
-        @test isapprox(y,getindexqty(ỹ,1))
+        @test isapprox(y,vec(ỹ)[1])
 
-        x̂ = E\UnitfulMatrix([y]) 
-        @test isapprox(y,getindexqty(E*x̂,1))
+        x̂ = E\y
+        @test isapprox(y,vec(E*x̂)[1])
 
         # now in a position to use BLUEs to solve
         # should handle matrix left divide with
@@ -280,16 +256,14 @@ include("test_functions.jl")
         
         σₙ = 0.01
         σₓ = 100.0
-
-        # Cnn = UnitfulMatrix(Diagonal(fill(σₙ^2,length(y))),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
-
-        # Cxx = UnitfulMatrix(Diagonal(fill(σₓ^2,length(x₀))),unit.(x₀)[:],unit.(x₀)[:].^-1,exact=false)
-
         Cnn = Diagonal(fill(σₙ^2,length(y)),fill(unit.(y).^1,length(y)),fill(unit.(y).^-1,length(y)),exact=false)
-
         Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
 
+        # Julia doesn't have method to make scalar into vector
+        # keep [y] notation for consistency
         problem = UnderdeterminedProblem(UnitfulMatrix([y]),E,Cnn,Cxx,x₀)
+
+        # when x₀ is a DimArray, then x̃ is a DimEstimate
         x̃ = solve(problem)
         @test within(y[1],getindexqty(E*x̃.v,1),3σₙ) # within 3-sigma
 

@@ -333,7 +333,7 @@ end
     error propagation.
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
-*(F::AbstractMatrix,x::DimEstimate) = Estimate(F*x.v,F*x.C*transpose(F),x.dims)
+*(F::AbstractMatrix,x::DimEstimate) = DimEstimate(F*x.v,F*x.C*transpose(F),x.dims)
 
 """    
     Matrix addition for Estimate includes
