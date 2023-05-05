@@ -231,8 +231,11 @@ include("test_functions.jl")
 
     @testset "source water inversion: many surface regions, with circulation lag, one or more obs, one or two state variables" begin
 
-        cases = ((false,false),(true,false),(true,true))
-        for (statevars,timeseries) in cases
+        cases = ((false,false,false),(true,false,false),(true,true,true))
+        for (statevars,timeseries,lag) in cases
+
+            lag ? nτ = 5 : nτ = 1
+            
             include("config_source_water_inversion.jl")
 
             # Step 1: get synthetic solution
@@ -311,56 +314,6 @@ include("test_functions.jl")
 
         end
     end
-
-    @testset "source water inversion: one obs TIMESERIES, many surface regions, with NO circulation lag" begin
-
-        @dim YearCE "years Common Era"
-        @dim SurfaceRegion "surface location"
-        @dim InteriorLocation "interior location"
-        yr = u"yr"
-   
-        surfaceregions = [:NATL,:ANT,:SUBANT]
-        years = (1990:2000)yr
-        n = length(surfaceregions)
-
-        M = DimArray(random_source_water_matrix(1))
-
-        x= transpose(source_water_solution(surfaceregions,years)) #true solution
-        y = M* x #synthetic observation
-        x₀ = x * 0 #first guess
-
-        E = impulseresponse(flipped_mult,x₀,M)
-                        
-        # Does E matrix work properly?
-        ỹ = E*UnitfulMatrix(vec(x))
-        for jj in eachindex(vec(y))
-            @test isapprox.(vec(y)[jj],getindexqty(ỹ,jj))
-        end
-
-        x̂ = E\UnitfulMatrix(vec(y))
-        for jj in eachindex(vec(y))
-            @test isapprox.(vec(y)[jj],getindexqty(E*x̂,jj))
-        end
-
-        σₙ = 0.01
-        σₓ = 100.0
-
-        Cnn = Diagonal(fill(σₙ,length(y)),vec(unit.(y)),vec(unit.(y)).^-1)
-
-        Cxx = Diagonal(fill(σₓ,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
-
-        problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
-        x̃ = solve(problem)
-        for jj in eachindex(vec(y))
-            @test within(y[jj],getindexqty(E*x̃.v,jj),3σₙ) # within 3-sigma
-        end
-
-        # no noise in obs but some control penalty
-        @test cost(x̃,problem) < 0.5 # ad-hoc choice
-
-    end
-
-    
 
     @testset "source water inversion: MANY OBS TIMESERIES, many surface regions, with circulation lag" begin
 
