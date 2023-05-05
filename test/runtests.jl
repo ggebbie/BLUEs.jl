@@ -244,7 +244,7 @@ include("test_functions.jl")
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-        #(statevars,timeseries,lag) = cases[1] # for interactive use
+        #(statevars,timeseries,lag) = cases[3] # for interactive use
         for (statevars,timeseries,lag) in cases
 
             lag ? nτ = 5 : nτ = 1
@@ -313,11 +313,10 @@ include("test_functions.jl")
 
             Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1,exact=false)
             Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
-
             problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
 
             # when x₀ is a DimArray, then x̃ is a DimEstimate
-            x̃ = solve(problem)
+            x̃ = solve(problem) # ::DimEstimate
             @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
             @test cost(x̃,problem) < 5e-2 # no noise in ob
             @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
