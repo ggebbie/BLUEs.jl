@@ -229,18 +229,20 @@ include("test_functions.jl")
         @test within(x̃.v,x,1.0e-5)
     end
 
-    @testset "source water inversion: many surface regions, with circulation lag, one or more obs, one or two state variables" begin
+    @testset "source water inversion: almost complete parameter suite" begin
+
+# many surface regions, with circulation lag, obs:one time or timeseries, obs: one or more locations, one or two state variables" 
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
+
         for (statevars,timeseries,lag) in cases
 
             lag ? nτ = 5 : nτ = 1
-            
+
             include("config_source_water_inversion.jl")
 
             # Step 1: get synthetic solution
             if !statevars
-
                 M = source_water_matrix_with_lag(surfaceregions,lags,years)
                 x= source_water_solution(surfaceregions,years)
                 # DimArray is good enough. This is an array, not necessarily a matrix.
@@ -269,6 +271,105 @@ include("test_functions.jl")
                 error("probably doesn't work")
                 # probably doesn't work, ambiguous
                 #    predict(x) = convolve(x,M,Tx)
+            else
+                global predict(x) = convolve(x,M)
+            end
+
+            E = impulseresponse(predict,x₀)
+
+            # convolve E and x
+            # Given, M and y. Make first guess for x.x
+            # probe to get E matrix. Use function convolve
+            println("Synthetic data")
+            y = predict(x)
+
+            # test compatibility
+            @test first(E*UnitfulMatrix(vec(x₀))) .== first(predict(x₀))
+            
+            # Julia doesn't have method to make scalar into vector
+            !(y isa AbstractVector) && (y = [y])
+
+            # Does E matrix work properly?
+            ỹ = E*UnitfulMatrix(vec(x))
+            for jj in eachindex(y)
+                @test isapprox(vec(y)[jj],vec(ỹ)[jj])
+            end
+            x̂ = E\y
+            for jj in eachindex(y)
+                @test isapprox(vec(y)[jj],vec(E*x̂)[jj])
+            end
+
+            # now in a position to use BLUEs to solve
+            σₙ = 0.01
+            σₓ = 100.0
+
+            Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1,exact=false)
+            Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1,exact=false)
+
+            problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
+
+            # when x₀ is a DimArray, then x̃ is a DimEstimate
+            x̃ = solve(problem)
+            @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
+            @test cost(x̃,problem) < 5e-2 # no noise in ob
+            @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
+
+        end
+    end
+
+    @testset "source water inversion: full parameter suite" begin
+
+# many surface regions, with circulation lag, obs:one time or timeseries, obs: one or more locations, one or two state variables" 
+
+        cases = ((false,false,false,false),(true,false,false,false),(true,true,true,true))
+
+        for (statevars,timeseries,lag,manylocs) in cases
+
+            lag ? nτ = 5 : nτ = 1
+            manylocs ? m = 6 : m = 1
+            interiorlocs = [Symbol("loc"*string(nloc)) for nloc = 1:m]
+
+            include("config_source_water_inversion.jl")
+
+            # Step 1: get synthetic solution
+            if !statevars
+
+                # pre-allocate a 3D DimArray
+                M = DimArray(zeros(nτ,n,m),(Ti((0:(nτ-1))yr),SurfaceRegion(surfaceregions),InteriorLocation(interiorlocs)))
+
+        # fill it at each location
+                for loc in InteriorLocation(interiorlocs)
+                    M[:,:,At(Symbol(loc))] = source_water_matrix_with_lag(surfaceregions,lags,years)
+                end
+
+                x= source_water_solution(surfaceregions,years)
+                # DimArray is good enough. This is an array, not necessarily a matrix.
+                x₀ = copy(x).*0
+
+            elseif statevars
+
+                M = source_water_matrix_with_lag(surfaceregions,lags,years)
+                statevariables = [:θ, :δ¹⁸O] 
+                x = source_water_solution(surfaceregions,years, statevariables)
+
+                coeffs = UnitfulMatrix(reshape(rand(2), (2,1)), [unit(1.0), K], [K*permil^-1])
+                x₀ = copy(x).*0
+
+            else
+                error("no case")
+            end
+
+            
+            # Step 2: get observational operator.
+            if timeseries && statevars
+                global predict(x) = convolve(x,M,Tx,coeffs)
+                #E = impulseresponse(convolve,x₀,M,Tx,coeffs)
+            elseif statevars
+                global predict(x) = convolve(x,M,coeffs)
+            elseif timeseries
+                error("probably doesn't work")
+                # probably doesn't work, ambiguous
+                predict(x) = convolve(x,M,Tx)
             else
                 global predict(x) = convolve(x,M)
             end
