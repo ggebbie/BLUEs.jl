@@ -244,6 +244,7 @@ include("test_functions.jl")
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
+        #(statevars,timeseries,lag) = cases[1] # for interactive use
         for (statevars,timeseries,lag) in cases
 
             lag ? nτ = 5 : nτ = 1
