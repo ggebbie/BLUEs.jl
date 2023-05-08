@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.25
 
 using Markdown
 using InteractiveUtils
@@ -101,8 +101,8 @@ begin
 
 	#sprinkle in a little noise, but just a little! we only have one core, after all 
 	y_contam = y .+ DimArray(randn(size(y))K ./ 50, y.dims)
-	plot(y[At(:loc1), :], label = "yₜᵣᵤₑ")
-	plot!(y_contam[At(:loc1), :], ylabel = "Temperature", title = "Timeseries at Core Site", label = "y")
+	plot(ustrip.(years), ustrip.(vec(y[At(:loc1), :])), label = "yₜᵣᵤₑ")
+	plot!(ustrip.(years), ustrip.(vec(y_contam[At(:loc1), :])), ylabel = "Temperature [K]", title = "Timeseries at Core Site", label = "y", xlabel = "Time [years]")
 end
 
 # ╔═╡ f54a5e6c-6ded-4ae5-8213-834975c38db7
@@ -179,26 +179,26 @@ end
 begin
 	l = @layout [a b]
 	lw = 5
-	p = scatter(years, vec(y), yerror = sqrt.(diag(Cnn)), label = "y", linewidth = 3, color = :black)
+	p = scatter(ustrip.(years), ustrip.(vec(y)), yerror = ustrip.(sqrt.(diag(Cnn))), label = "y", linewidth = 3, color = :black)
 	for region in surfaceregions
-		plot!(years, vec(Measurements.value.(x̃.x[At(region), :])), ribbon = vec(Measurements.uncertainty.(x̃.x[At(region), :])), label = "x̃:" * eval(region), linewidth = lw, color = darkcolors[region]) 
+		plot!(ustrip.(years), ustrip.(vec(Measurements.value.(x̃.x[At(region), :]))), ribbon = ustrip.(vec(Measurements.uncertainty.(x̃.x[At(region), :]))), label = "x̃:" * eval(region), linewidth = lw, color = darkcolors[region]) 
 		#plot!(years, vec(Measurements.value.(x₀DE.x[At(region), :])), ribbon = vec(Measurements.uncertainty.(x₀DE.x[At(region), :])), label = "x₀:" * eval(region))
 	end
 	#true values 
-	plot!(years, vec(x_NATL.v), label = "xₙₐₜₗ", legend = :outertopright, linewidth = lw, color = lightcolors[:NATL])
-	plot!(years, vec(x_ANT.v), label = "xₐₙₜ", linewidth = lw, color = lightcolors[:ANT])
+	plot!(ustrip.(years), ustrip.(vec(x_NATL.v)), label = "xₙₐₜₗ", legend = :outertopright, linewidth = lw, color = lightcolors[:NATL])
+	plot!(ustrip.(years), ustrip.(vec(x_ANT.v)), label = "xₐₙₜ", linewidth = lw, color = lightcolors[:ANT])
 
 	p2 = plot()
 	for loc in locs2 
-		scatter!(years, vec(Measurements.value.(y2DE.x[At(loc), :])), yerror = vec(Measurements.uncertainty.(y2DE.x[At(loc), :])), label = "", linewidth = 3, color = :black)
+		scatter!(ustrip.(years), ustrip.(vec(Measurements.value.(y2DE.x[At(loc), :]))), yerror = ustrip.(vec(Measurements.uncertainty.(y2DE.x[At(loc), :]))), label = "", linewidth = 3, color = :black)
 	end
 	for region in surfaceregions
-		plot!(years, vec(Measurements.value.(x̃2.x[At(region), :])), ribbon = vec(Measurements.uncertainty.(x̃2.x[At(region), :])), label = "", linewidth = lw, color = darkcolors[region]) 
+		plot!(ustrip.(years), ustrip.(vec(Measurements.value.(x̃2.x[At(region), :]))), ribbon = ustrip.(vec(Measurements.uncertainty.(x̃2.x[At(region), :]))), label = "", linewidth = lw, color = darkcolors[region]) 
 		#plot!(years, vec(Measurements.value.(x₀DE.x[At(region), :])), ribbon = vec(Measurements.uncertainty.(x₀DE.x[At(region), :])), label = "x₀:" * eval(region))
 	end
 	#true values 
-	plot!(years, vec(x_NATL.v), label = "", legend = :outertopright, linewidth = lw, color = lightcolors[:NATL])
-	plot!(years, vec(x_ANT.v), label = "", linewidth = lw, color = lightcolors[:ANT])
+	plot!(ustrip.(years), ustrip.(vec(x_NATL.v)), label = "", legend = :outertopright, linewidth = lw, color = lightcolors[:NATL])
+	plot!(ustrip.(years), ustrip.(vec(x_ANT.v)), label = "", linewidth = lw, color = lightcolors[:ANT])
 
 	plot(p, p2, layout = l)
 end
@@ -248,8 +248,8 @@ begin
 	y3_contam = y3 + DimArray(randn(size(y3))permil ./ 10, y3.dims)
 	p5 = Vector{Any}(undef, 2)
 	for (i, l) in enumerate(locs2)
-		p5[i] = plot(y3[:, At(l)], label = i == 1 ? "yₜᵣᵤₑ" : "")
-		plot!(y3_contam[:, At(l)], label = i == 1 ? "y, contaminated" : "", ylabel = "d18Oc", title = "Location " * string(
+		p5[i] = plot(ustrip.(vec(y3[:, At(l)])), label = i == 1 ? "yₜᵣᵤₑ" : "")
+		plot!(ustrip.(vec(y3_contam[:, At(l)])), label = i == 1 ? "y, contaminated" : "", ylabel = "d18Oc", title = "Location " * string(
 			i), legend = :outertopright)
 	end
 	plot(p5..., layout = l5)
@@ -287,9 +287,9 @@ begin
 	titles = ["NATL:θ", "NATL:d18O", "ANT:θ", "ANT:d18O"]
 	p3 = Vector{Any}(undef, 4)
 	for (i, s) in enumerate(selectdims)
-		p3[i] = plot(Measurements.measurement.(ustrip.(x̃3.x[s...])), label = i == 1 ? "x̃" : "", ylabel = "Temperature [K]")
-		plot!(ustrip.(x3[s...]), label = i == 1 ? "xₜᵣᵤₑ" : "")
-		plot!(ustrip.(x₀3[s...]), label = i == 1 ? "x₀" : "", title = titles[i], legend = :outertopright)
+		p3[i] = plot(Measurements.measurement.(vec(ustrip.(x̃3.x[s...]))), label = i == 1 ? "x̃" : "", ylabel = "Temperature [K]")
+		plot!(ustrip.(vec(x3[s...])), label = i == 1 ? "xₜᵣᵤₑ" : "")
+		plot!(ustrip.(vec(x₀3[s...])), label = i == 1 ? "x₀" : "", title = titles[i], legend = :outertopright)
 	end
 	plot(p3..., layout = l3)
 end
@@ -301,9 +301,9 @@ begin
 	p4 = Vector{Any}(undef, 2)
 	titles4 = ["Location 1", "Location 2"]
 	for (i, l) in enumerate(locs2) 
-		p4[i] = plot(Measurements.measurement.(ustrip.(ỹ3[:, At(l)])), label = i == 1 ? "ỹ" : "")
-		plot!(ustrip.(y3[:, At(l)]), label = i == 1 ? "yₜᵣᵤₑ" : "", title = titles4[i])
-		plot!(ustrip.(y3_contam[:, At(l)]), label = i == 1 ? "y, contam." : "", title = titles4[i], legend = :outertopright)
+		p4[i] = plot(Measurements.measurement.(ustrip.(vec(ỹ3[:, At(l)]))), label = i == 1 ? "ỹ" : "")
+		plot!(ustrip.(vec(y3[:, At(l)])), label = i == 1 ? "yₜᵣᵤₑ" : "", title = titles4[i])
+		plot!(ustrip.(vec(y3_contam[:, At(l)])), label = i == 1 ? "y, contam." : "", title = titles4[i], legend = :outertopright)
 	end 
 		plot(p4..., layout = l4)
 end
@@ -326,7 +326,7 @@ end
 # ╠═02c5d686-6600-47fc-ba7b-6b5dec5bd701
 # ╟─41ea9b57-3901-4581-b9b4-e2f9afb16ce7
 # ╠═1dfba472-cd25-4641-888f-51d6368fa7b1
-# ╟─73ece91f-7309-43e1-8832-ecfcfe32a5bf
+# ╠═73ece91f-7309-43e1-8832-ecfcfe32a5bf
 # ╟─77b2f73b-5c96-49f0-9c93-9846c6579759
 # ╟─535bde0c-dd75-42f2-bcc8-e3830699a7de
 # ╠═a76301d4-2831-4902-8b5f-2148451d5eef
