@@ -26,9 +26,9 @@ begin
 	using InteractiveUtils, PlutoUI
 end
 
+
 # ╔═╡ c2b6940f-6eb3-4aa9-9b3f-58f02d8270cb
 begin
-	#load in some important things
 	include("../test/test_functions.jl")
 	const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";yr = u"yr"; °C = u"°C"
 	ENV["UNITFUL_FANCY_EXPONENTS"] = true
