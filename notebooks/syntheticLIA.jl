@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.25
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -21,7 +21,7 @@ import Pkg; Pkg.activate(abspath(joinpath(pwd(), "..")))
 # ╔═╡ c2d82ba9-624a-46f6-a53d-97e3f00db657
 begin
 	using Revise
-	using BLUEs, Unitful, DimensionalData, ToeplitzMatrices, Plots, UnitfulLinearAlgebra, LinearAlgebra, SparseArrays, Statistics, Measurements
+	using BLUEs, Unitful, DimensionalData, ToeplitzMatrices, Plots, PlotlyJS, UnitfulLinearAlgebra, LinearAlgebra, SparseArrays, Statistics, Measurements
 	using DimensionalData:@dim
 	using InteractiveUtils, PlutoUI
 end
