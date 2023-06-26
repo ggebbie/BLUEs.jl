@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0-rc3"
+julia_version = "1.9.1"
 manifest_format = "2.0"
 project_hash = "8594145ec0f80d1d026cd9f83247b69f6922bf52"
 
@@ -50,7 +50,7 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 deps = ["DimensionalData", "LinearAlgebra", "Measurements", "Revise", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
 path = ".."
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.1.4-alpha"
+version = "0.1.5-alpha"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -516,12 +516,12 @@ uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
 version = "1.13.1"
 
 [[deps.UnitfulLinearAlgebra]]
-deps = ["DimensionalData", "LinearAlgebra", "SparseArrays", "Statistics", "Unitful"]
-git-tree-sha1 = "bef863439add0b7af959c9d919803d6ec850fa25"
+deps = ["DimensionalData", "LinearAlgebra", "Revise", "SparseArrays", "Statistics", "Unitful"]
+git-tree-sha1 = "46a88b3bff4d2fd872346c3bd669c9b00146b942"
 repo-rev = "main"
 repo-url = "https://github.com/ggebbie/UnitfulLinearAlgebra.jl"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
-version = "0.2.14-alpha"
+version = "0.2.16-alpha"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
@@ -531,7 +531,7 @@ version = "1.2.13+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.7.0+0"
+version = "5.8.0+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]

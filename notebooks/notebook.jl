@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.14
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -18,9 +18,6 @@ end
 begin
 	ENV["UNITFUL_FANCY_EXPONENTS"] = true
 	import Pkg; Pkg.activate(".")
-	#Pkg.add("PlutoUI")
-	Pkg.add("Plots")
-	
 	using BLUEs
 	using Test
 	using LinearAlgebra
@@ -35,6 +32,8 @@ begin
 	using InteractiveUtils
 	using PlutoUI
 	using Pluto
+	plotlyjs()
+	#gr()
 end
 
 
@@ -110,19 +109,19 @@ let
 	display(E)
 	println()
 	
-	Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E),exact=true)
+	Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E))
 	println("Cnn⁻¹ = ")
 	display(Cnn⁻¹)
 	println()
 	
-	@show x = randn(N)m
+	@show x = UnitfulMatrix(randn(N)m)
 	@show y = E*x
 	println()
 	
 	@show problem = OverdeterminedProblem(y,E,Cnn⁻¹)
 	println()	
 	@time @show x̃ = solve(problem,alg=:hessian)
-	@time @show x̃ = solve(problem,alg=:textbook)
+	@time @show x̃ = solve(problem,alg=:textbook) # Unitful error
 	
 	println()
 	@show x ≈ x̃.v
@@ -133,10 +132,11 @@ let
 	l = @layout [
 		a{0.5w} b{0.5w}
 	]
-	p1 = scatter(y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), label = "y", xlabel = "Index", ylabel = "y", title = "Obs. and Recon. Obs")
-	scatter!((E*x̃).v; yerror = (E*x̃).σ, label = "Ex̃")
-	p2 = scatter(x; label = "xₜₕₑₒ", xlabel = "Index", ylabel = "x", title = "True Par. and Est. Par.")
-	scatter!(x̃.v;yerror = x̃.σ, label = "x̃")
+	    println(diag(Cnn⁻¹))
+	p1 = scatter(vec(y), yerror = sqrt.(1 ./ diag(Cnn⁻¹)), label = "y", xlabel = "Index", ylabel = "y", title = "Obs. and Recon. Obs")
+	scatter!(vec((E*x̃).v); yerror = (E*x̃).σ, label = "Ex̃")
+	p2 = scatter(vec(x); label = "xₜₕₑₒ", xlabel = "Index", ylabel = "x", title = "True Par. and Est. Par.")
+	scatter!(vec(x̃.v);yerror = x̃.σ, label = "x̃")
 	plot(p1, p2, layout = l)
 	end
 end
@@ -159,31 +159,31 @@ $\mathbf{E} = \begin{bmatrix}
 
 # ╔═╡ f3ddcd82-b84c-4504-bbd5-309ec62a10c3
 let 
-	begin
-		Random.seed!(1234)
-		    numobs = 10  # number of obs
-	        @show t = collect(0:1:numobs-1)s
+    begin
+	Random.seed!(1234)
+	numobs = 10  # number of obs
+	@show t = collect(0:1:numobs-1)s
 	
-	        @show a = randn()m # intercept
-	        @show b = randn()m/s # slope
+	@show a = randn()m # intercept
+	@show b = randn()m/s # slope
 	
-	        @show y = a .+ b.*t .+ randn(numobs)m
+	@show y = a .+ b.*t .+ randn(numobs)m
 	
-	        E = UnitfulMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
-			println()
-			display(E)
-			println()
-	        Cnn⁻¹ = Diagonal(fill(1.0,numobs),fill(m^-1,numobs),fill(m,numobs),exact=true)
-			display(Cnn⁻¹)
+	E = UnitfulMatrix(hcat(ones(numobs),ustrip.(t)),fill(m,numobs),[m,m/s],exact=true)
+	println()
+	display(E)
+	println()
+	Cnn⁻¹ = Diagonal(fill(1.0,numobs),fill(m^-1,numobs),fill(m,numobs),exact=true)
+	display(Cnn⁻¹)
 	
-	        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-	        @show x̃ = solve(problem,alg=:textbook)
-	        x̃1 = solve(problem,alg=:hessian) #solutions will be identical 
-	        @show cost(x̃,problem) < 3numobs; # rough guide, could get unlucky and not pass
-			scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
-			plot!(t, (E*x̃).v, ribbon = (E*x̃).σ, label = "ỹ(t)")
-		
-	end
+	problem = OverdeterminedProblem(UnitfulMatrix(y),E,Cnn⁻¹)
+	@show x̃ = solve(problem,alg=:textbook)
+	x̃1 = solve(problem,alg=:hessian) #solutions will be identical 
+	@show cost(x̃,problem) < 3numobs; # rough guide, could get unlucky and not pass
+	scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
+	plot!(t, vec((E*x̃).v), ribbon = (E*x̃).σ, label = "ỹ(t)")
+	
+    end
 end
 
 
@@ -220,12 +220,12 @@ begin
 		# "overdetermined, problem 1.4" 
 		Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K],exact=true)
 		Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
-		oproblem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
+		oproblem = OverdeterminedProblem(UnitfulMatrix(y),E,Cnn⁻¹,Cxx⁻¹,UnitfulMatrix(x₀))
 		
 		# "underdetermined, problem 2.1" 
 		Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
 		Cxx = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1],exact=true)
-		uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
+		uproblem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,UnitfulMatrix(x₀))
 		
 		@time x̃1 = solve(oproblem)
 		@test cost(x̃1,oproblem) < 1 # rough guide, coul
@@ -240,16 +240,16 @@ begin
 		b{0.5w} c{0.5w}
 		]
 		p1 = scatter(["y"], y; yerror = σₙ, legend = false, ylabel = "δ¹⁸O")
-		scatter!(["Ex̃₁"], (E*x̃1).v, yerror = (E*x̃1).σ)
-		scatter!(["Ex̃₂"], (E*x̃2).v, yerror = (E*x̃2).σ)
-		scatter!(["Exₒ"], E*x₀)
+		scatter!(["Ex̃₁"], vec((E*x̃1).v), yerror = (E*x̃1).σ)
+		scatter!(["Ex̃₂"], vec((E*x̃2).v), yerror = (E*x̃2).σ)
+		scatter!(["Exₒ"], vec(E*UnitfulMatrix(x₀)))
 
-		p2 = scatter(["x̃1"], [x̃1.v[1]], yerror = x̃1.σ[1], legend = false, ylims = (-1.5, -0.3))
-		scatter!(["x̃2"], [x̃2.v[1]], yerror = x̃2.σ[1])
+		p2 = scatter(["x̃1"], [vec(x̃1.v)[1]], yerror = [x̃1.σ[1]], legend = false, ylims = (-1.5, -0.3))
+		scatter!(["x̃2"], [vec(x̃2.v)[1]], yerror = x̃2.σ[1])
 		scatter!(["x₀"],[x₀[1]])
 
-		p3 = scatter(["x̃1"], [x̃1.v[2]], yerror = x̃1.σ[2], legend = false, ylims = (2, 6))
-		scatter!(["x̃2"], [x̃2.v[2]], yerror = x̃2.σ[2])
+		p3 = scatter(["x̃1"], [vec(x̃1.v)[2]], yerror = x̃1.σ[2], legend = false, ylims = (2, 6))
+		scatter!(["x̃2"], [vec(x̃2.v)[2]], yerror = x̃2.σ[2])
 		scatter!(["x₀"], [x₀[2]])
 		plot(p1,p2,p3, layout = l)	
 end
@@ -295,7 +295,7 @@ let
 		#M = 50
         t = (1:M)d
 
-        E = UnitfulMatrix(ustrip.(hcat(t.^0, t, t.^2, t.^3)),[g/kg,g/kg,g/kg,g/kg],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
+        E = UnitfulMatrix(ustrip.(hcat(t.^0, t, t.^2, t.^3)),fill(g/kg,M),[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
 
         σₙ = 0.1g/kg
         Cₙₙ = Diagonal(fill(ustrip(σₙ^2),M),fill(g/kg,M),fill(kg/g,M),exact=true)
@@ -315,7 +315,7 @@ let
         @show x₀ = zeros(N).*unitdomain(Cxx⁻¹)
         x = Cxx¹².L*randn(N)
         @show y = E*x
-        oproblem = OverdeterminedProblem(y,E,Cₙₙ⁻¹,Cxx⁻¹,x₀)
+        oproblem = OverdeterminedProblem(y,E,Cₙₙ⁻¹,Cxx⁻¹,UnitfulMatrix(x₀))
 
         # not perfect data fit b.c. of prior info
         x̃ = solve(oproblem,alg=:hessian)
@@ -327,12 +327,12 @@ let
 			b{0.25w} c{0.25w} d{0.25w} e{0.25w}
 			f{0.25w}
 		]
-		p1 = scatter(t, y; yerror = sqrt.(diag(Cₙₙ)), label = "y", xlabel = "time", ylabel = "y")
-		scatter!(t, (E*x̃).v; yerror = (E*x̃).σ, label = "Ex̃")
-		p2 = scatter(["true", "x̃", "x₀"], [x[1], x̃.v[1], x₀[1]], ylabel = "", legend = false)
-		p3 = scatter(["true", "x̃", "x₀"], [x[2], x̃.v[2], x₀[2]], ylabel = "", legend = false)
-		p4 = scatter(["true", "x̃", "x₀"], [x[3], x̃.v[3], x₀[3]], ylabel = "", legend = false)
-		p5 = scatter(["true", "x̃", "x₀"], [x[4], x̃.v[4], x₀[4]], ylabel = "", legend = false)
+		p1 = scatter(t, vec(y); yerror = sqrt.(diag(Cₙₙ)), label = "y", xlabel = "time", ylabel = "y")
+		scatter!(t, vec((E*x̃).v); yerror = (E*x̃).σ, label = "Ex̃")
+		p2 = scatter(["true", "x̃", "x₀"], [vec(x)[1], vec(x̃.v)[1], x₀[1]], ylabel = "", legend = false)
+		p3 = scatter(["true", "x̃", "x₀"], [vec(x)[2], vec(x̃.v)[2], x₀[2]], ylabel = "", legend = false)
+		p4 = scatter(["true", "x̃", "x₀"], [vec(x)[3], vec(x̃.v)[3], x₀[3]], ylabel = "", legend = false)
+		p5 = scatter(["true", "x̃", "x₀"], [vec(x)[4], vec(x̃.v)[4], x₀[4]], ylabel = "", legend = false)
 		plot(p1,p2,p3, p4, p5, layout = l)
 	end
 end
@@ -371,14 +371,15 @@ let
         x = Cxx¹².L*randn(n)
         @show y = E*x
 
-        uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
+        uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,UnitfulMatrix(x₀))
 
-        @show x̃ = solve(uproblem)
+           x̃ = solve(uproblem)
+                #    @show x̃ = solve(uproblem) # show method missing
         @test cost(x̃,uproblem) < 3M 
 		t = range(0.0yr, 5.0yr, length = length(y))
-		p1 = scatter(t, y, yerror = σₙ, label = "y", xlabel = "time", ylabel = "sea level")
-		scatter!(t, (E*x̃).v, yerror = (E*x̃).σ, label = "ỹ")
-		plot!(τ, x̃.v, ribbon = x̃.σ, label = "x̃")
+		p1 = scatter(t, vec(y), yerror = σₙ, label = "y", xlabel = "time", ylabel = "sea level")
+		scatter!(t, vec((E*x̃).v), yerror = (E*x̃).σ, label = "ỹ")
+		plot!(τ, vec(x̃.v), ribbon = x̃.σ, label = "x̃")
 	end
 end
 
@@ -407,7 +408,7 @@ let
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1),exact=true)
 
         Cnn⁻¹ = (one=Cnn⁻¹1, two =Cnn⁻¹1)
-        x = randn(N)m
+        x = UnitfulMatrix(randn(N)m)
 
         # create perfect data
         @show y = E*x
@@ -423,29 +424,25 @@ let
 end
 
 
-# ╔═╡ 17f7ad0f-4ada-4bb2-b2de-e6a78dbd7394
-
-
 # ╔═╡ Cell order:
-# ╠═1aa4af78-f0ee-4d5a-916b-c6e0decdd300
+# ╟─1aa4af78-f0ee-4d5a-916b-c6e0decdd300
 # ╠═1ccfc590-90f7-11ed-1e7c-dfaec0816597
-# ╠═970a7544-c5f2-4f2e-ba52-316f67554482
-# ╠═f862f30e-ea14-41a1-93ee-63d92380cd8d
+# ╟─970a7544-c5f2-4f2e-ba52-316f67554482
+# ╟─f862f30e-ea14-41a1-93ee-63d92380cd8d
 # ╠═7dd4252c-f2d0-4839-9052-981b86e83804
-# ╠═6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
+# ╟─6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
 # ╠═98024f12-fc38-40e3-a4a4-c7678940f5ee
-# ╠═a820781d-2e6a-4b4d-a1cb-f824c293de57
+# ╟─a820781d-2e6a-4b4d-a1cb-f824c293de57
 # ╠═f3ddcd82-b84c-4504-bbd5-309ec62a10c3
 # ╠═1be54490-8984-42da-b26c-f3eb39b507f4
 # ╠═d56d533f-e2ae-4528-897e-cdc726616db1
 # ╠═51eb9f4a-8c8d-4488-a499-9ff9555ac992
 # ╠═6338513d-6adf-4ba1-8d78-cce3d2178f51
-# ╠═17b6c57a-0b3e-4aa2-bffd-df97bbd5a1c8
+# ╟─17b6c57a-0b3e-4aa2-bffd-df97bbd5a1c8
 # ╠═7c39ff4c-8ceb-4af8-9189-0ead81d6388a
 # ╠═838d2317-455a-4502-97cb-9a5d68eba1a2
 # ╠═c2ebefbb-2d78-40de-809e-8207caa9cc6d
 # ╠═9fea9058-0220-41e3-9254-c42b13dee248
 # ╠═8fafebcd-7df4-4ff1-905c-4a14c71a5290
-# ╠═293a74b4-f862-45e6-a27e-8dda5d9264f9
+# ╟─293a74b4-f862-45e6-a27e-8dda5d9264f9
 # ╠═cbc01f32-76bb-478c-be4e-969542ef32e0
-# ╠═17f7ad0f-4ada-4bb2-b2de-e6a78dbd7394
