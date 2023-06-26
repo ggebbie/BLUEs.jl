@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.14
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -18,9 +18,6 @@ end
 begin
 	ENV["UNITFUL_FANCY_EXPONENTS"] = true
 	import Pkg; Pkg.activate(".")
-	#Pkg.add("PlutoUI")
-	Pkg.add("Plots")
-	
 	using BLUEs
 	using Test
 	using LinearAlgebra
@@ -35,6 +32,8 @@ begin
 	using InteractiveUtils
 	using PlutoUI
 	using Pluto
+	#plotlyjs()
+	#gr()
 end
 
 
@@ -110,19 +109,19 @@ let
 	display(E)
 	println()
 	
-	Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E),exact=true)
+	Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E))
 	println("Cnn⁻¹ = ")
 	display(Cnn⁻¹)
 	println()
 	
-	@show x = randn(N)m
+	@show x = UnitfulMatrix(randn(N)m)
 	@show y = E*x
 	println()
 	
 	@show problem = OverdeterminedProblem(y,E,Cnn⁻¹)
 	println()	
 	@time @show x̃ = solve(problem,alg=:hessian)
-	@time @show x̃ = solve(problem,alg=:textbook)
+	@time @show x̃ = solve(problem,alg=:textbook) # Unitful error
 	
 	println()
 	@show x ≈ x̃.v
@@ -133,10 +132,11 @@ let
 	l = @layout [
 		a{0.5w} b{0.5w}
 	]
-	p1 = scatter(y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), label = "y", xlabel = "Index", ylabel = "y", title = "Obs. and Recon. Obs")
-	scatter!((E*x̃).v; yerror = (E*x̃).σ, label = "Ex̃")
+	    println(diag(Cnn⁻¹))
+	p1 = scatter(vec(y), yerror = sqrt.(1 ./ diag(Cnn⁻¹)), label = "y", xlabel = "Index", ylabel = "y", title = "Obs. and Recon. Obs")
+	scatter!(vec((E*x̃).v); yerror = vec((E*x̃).σ), label = "Ex̃")
 	p2 = scatter(x; label = "xₜₕₑₒ", xlabel = "Index", ylabel = "x", title = "True Par. and Est. Par.")
-	scatter!(x̃.v;yerror = x̃.σ, label = "x̃")
+	scatter!(vec(x̃.v);yerror = x̃.σ, label = "x̃")
 	plot(p1, p2, layout = l)
 	end
 end
@@ -180,8 +180,8 @@ let
 	        @show x̃ = solve(problem,alg=:textbook)
 	        x̃1 = solve(problem,alg=:hessian) #solutions will be identical 
 	        @show cost(x̃,problem) < 3numobs; # rough guide, could get unlucky and not pass
-			scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
-			plot!(t, (E*x̃).v, ribbon = (E*x̃).σ, label = "ỹ(t)")
+			#scatter(t, y; yerror = sqrt.(1 ./ diag(Cnn⁻¹)), xlabel = "time", ylabel = "distance", label = "y(t)")
+			#plot!(t, (E*x̃).v, ribbon = (E*x̃).σ, label = "ỹ(t)")
 		
 	end
 end
@@ -427,12 +427,12 @@ end
 
 
 # ╔═╡ Cell order:
-# ╠═1aa4af78-f0ee-4d5a-916b-c6e0decdd300
+# ╟─1aa4af78-f0ee-4d5a-916b-c6e0decdd300
 # ╠═1ccfc590-90f7-11ed-1e7c-dfaec0816597
-# ╠═970a7544-c5f2-4f2e-ba52-316f67554482
-# ╠═f862f30e-ea14-41a1-93ee-63d92380cd8d
+# ╟─970a7544-c5f2-4f2e-ba52-316f67554482
+# ╟─f862f30e-ea14-41a1-93ee-63d92380cd8d
 # ╠═7dd4252c-f2d0-4839-9052-981b86e83804
-# ╠═6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
+# ╟─6b9668b2-dcdc-4ac9-b29c-feeb155ec42f
 # ╠═98024f12-fc38-40e3-a4a4-c7678940f5ee
 # ╠═a820781d-2e6a-4b4d-a1cb-f824c293de57
 # ╠═f3ddcd82-b84c-4504-bbd5-309ec62a10c3

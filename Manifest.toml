@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0-rc3"
+julia_version = "1.9.1"
 manifest_format = "2.0"
 project_hash = "4d3c6ac7ade4801b049c12e6084a979fe52e7973"
 
@@ -476,12 +476,12 @@ uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
 version = "1.12.4"
 
 [[deps.UnitfulLinearAlgebra]]
-deps = ["DimensionalData", "LinearAlgebra", "SparseArrays", "Statistics", "Unitful"]
-git-tree-sha1 = "bef863439add0b7af959c9d919803d6ec850fa25"
+deps = ["DimensionalData", "LinearAlgebra", "Revise", "SparseArrays", "Statistics", "Unitful"]
+git-tree-sha1 = "46a88b3bff4d2fd872346c3bd669c9b00146b942"
 repo-rev = "main"
 repo-url = "https://github.com/ggebbie/UnitfulLinearAlgebra.jl"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
-version = "0.2.14-alpha"
+version = "0.2.16-alpha"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
@@ -491,7 +491,7 @@ version = "1.2.13+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.7.0+0"
+version = "5.8.0+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
