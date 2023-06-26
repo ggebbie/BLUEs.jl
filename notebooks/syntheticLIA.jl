@@ -21,9 +21,10 @@ import Pkg; Pkg.activate(abspath(joinpath(pwd(), "..")))
 # ╔═╡ c2d82ba9-624a-46f6-a53d-97e3f00db657
 begin
 	using Revise
-	using BLUEs, Unitful, DimensionalData, ToeplitzMatrices, Plots, PlotlyJS, UnitfulLinearAlgebra, LinearAlgebra, SparseArrays, Statistics, Measurements
+	using BLUEs, Unitful, DimensionalData, ToeplitzMatrices, Plots, UnitfulLinearAlgebra, LinearAlgebra, SparseArrays, Statistics, Measurements
 	using DimensionalData:@dim
 	using InteractiveUtils, PlutoUI
+	plotlyjs()
 end
 
 
@@ -101,8 +102,10 @@ begin
 
 	#sprinkle in a little noise, but just a little! we only have one core, after all 
 	y_contam = y .+ DimArray(randn(size(y))K ./ 50, y.dims)
-	plot(ustrip.(years), ustrip.(vec(y[At(:loc1), :])), label = "yₜᵣᵤₑ")
-	plot!(ustrip.(years), ustrip.(vec(y_contam[At(:loc1), :])), ylabel = "Temperature [K]", title = "Timeseries at Core Site", label = "y", xlabel = "Time [years]")
+	plot(years, vec(y[At(:loc1), :]), label = "yₜᵣᵤₑ")
+	plot!(years, vec(y_contam[At(:loc1), :]), ylabel = "Temperature", title = "Timeseries at Core Site", label = "y", xlabel = "Time")
+	#plot(ustrip.(years), ustrip.(vec(y[At(:loc1), :])), label = "yₜᵣᵤₑ")
+	#plot!(ustrip.(years), ustrip.(vec(y_contam[At(:loc1), :])), ylabel = "Temperature [K]", title = "Timeseries at Core Site", label = "y", xlabel = "Time [years]")
 end
 
 # ╔═╡ f54a5e6c-6ded-4ae5-8213-834975c38db7
@@ -301,11 +304,15 @@ begin
 	p4 = Vector{Any}(undef, 2)
 	titles4 = ["Location 1", "Location 2"]
 	for (i, l) in enumerate(locs2) 
-		p4[i] = plot(Measurements.measurement.(ustrip.(vec(ỹ3[:, At(l)]))), label = i == 1 ? "ỹ" : "")
-		plot!(ustrip.(vec(y3[:, At(l)])), label = i == 1 ? "yₜᵣᵤₑ" : "", title = titles4[i])
-		plot!(ustrip.(vec(y3_contam[:, At(l)])), label = i == 1 ? "y, contam." : "", title = titles4[i], legend = :outertopright)
+		p4[i] = plot(vec(ỹ3[:, At(l)]), label = i == 1 ? "ỹ" : "")
+		plot!(vec(y3[:, At(l)]), label = i == 1 ? "yₜᵣᵤₑ" : "", title = titles4[i])
+		plot!(vec(y3_contam[:, At(l)]), label = i == 1 ? "y, contam." : "", title = titles4[i], legend = :outertopright)
+		
+		#p4[i] = plot(Measurements.measurement.(ustrip.(vec(ỹ3[:, At(l)]))), label = i == 1 ? "ỹ" : "")
+		#plot!(ustrip.(vec(y3[:, At(l)])), label = i == 1 ? "yₜᵣᵤₑ" : "", title = titles4[i])
+		#plot!(ustrip.(vec(y3_contam[:, At(l)])), label = i == 1 ? "y, contam." : "", title = titles4[i], legend = :outertopright)
 	end 
-		plot(p4..., layout = l4)
+	plot(p4..., layout = l4)
 end
 
 # ╔═╡ Cell order:
