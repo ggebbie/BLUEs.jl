@@ -16,9 +16,13 @@ import LinearAlgebra: pinv, transpose
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
 """
-    struct Estimate
+    struct Estimate{Tv <: Number,TC <: Number} 
     
-    a structure with some vector of values v and associated covariance matrix C 
+a structure with some vector of values v and associated covariance matrix C
+
+# Fields
+-   `v :: AbstractVector{Tv}`
+-   `C :: AbstractMatrix{TC}`
 """
 struct Estimate{Tv <: Number,TC <: Number} 
     v :: AbstractVector{Tv}
@@ -26,10 +30,15 @@ struct Estimate{Tv <: Number,TC <: Number}
 end
 
 """
-    struct DimEstimate
+    struct DimEstimate{Tv <: Number,TC <: Number} 
     
     A structure with some vector of values v and associated covariance matrix C.
-    Add axis dimensions.
+Differs from `Estimate` in that axis dimensions are added.
+
+# Fields
+-   `v :: AbstractVector{Tv}`
+-   `C :: AbstractMatrix{TC}`
+-   `dims :: Tuple`
 """
 struct DimEstimate{Tv <: Number,TC <: Number} 
     v :: AbstractVector{Tv}
@@ -96,10 +105,6 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Est
     summary(io, x); println(io)
     println(io, "Estimate and 1σ uncertainty")
     show(io, mime, x.x)
-    # println(io, "\nsingular values:")
-    # show(io, mime, F.S)
-    # println(io, "\nV (right singular vectors):")
-    # show(io, mime, F.V)
 end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Float64}, 3})
@@ -145,12 +150,17 @@ function getproperty(x::DimEstimate, d::Symbol)
         return .√diag(x.C)
     elseif d === :x
 
-        # x.v can be a UnitfulVector, so wrap with Matrix
+        # x.v can be a UnitfulVector, so wrap with vec
+        # wrapping with Matrix causes type consistency issues
         if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
-            v = Matrix(x.v)
+            #v = Matrix(x.v)
+            v = vec(x.v)
         else
             v = x.v
         end
+
+        # types of v and x.σ should be consistent
+        # should there be a conditional for σ (like v) above?
         tmp = measurement.(v,x.σ)
         return DimArray(reshape(tmp,size(x.dims)),x.dims)
     #return x.v .± x.σ
