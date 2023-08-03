@@ -34,6 +34,17 @@ include("test_functions.jl")
 
     end
 
+    @testset "issue 41" begin
+        #what if the type is a Quantity but no units
+        urange3 = fill(NoUnits, 25)
+        y3 = UnitfulMatrix(rand(25), urange3)
+        Cyy3 = UnitfulMatrix(rand(25, 25), urange3, urange3 .^ -1)
+        Cyy3 isa UnitfulLinearAlgebra.AbstractUnitfulMatrix
+        dCyy3 = diag(Cyy3)
+        # test whether next line can be shown
+        de3 = DimEstimate(y3, Cyy3, (X(1:5), Y(1:5)))
+    end
+    
     @testset "mixed signals: dimensionless matrix" begin
         N = 2
         for M in 2:4
