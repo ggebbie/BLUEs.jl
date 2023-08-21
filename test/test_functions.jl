@@ -118,7 +118,7 @@ function source_water_matrix_vector_pair_with_lag(M)
     return E,x
 end
 
-function source_water_matrix_with_lag(surfaceregions,lags,years)
+function source_water_matrix_with_lag(surfaceregions,lags)
     yr = u"yr"
     K = u"K"
     
