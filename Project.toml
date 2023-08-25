@@ -18,6 +18,7 @@ DimensionalData = "0.24"
 Measurements = "2"
 ToeplitzMatrices = "0.7, 0.8"
 Unitful = "1"
+UnitfulLinearAlgebra = "0.3"
 julia = "1.8"
 
 [extras]
