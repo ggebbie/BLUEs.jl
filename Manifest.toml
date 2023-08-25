@@ -2,7 +2,7 @@
 
 julia_version = "1.9.2"
 manifest_format = "2.0"
-project_hash = "bf5d4f015010f682078d468457ab70056c879eb1"
+project_hash = "9582a64f2a7e94859aaa1dd4ba0432d4c6876bac"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -464,8 +464,6 @@ version = "1.16.3"
 [[deps.UnitfulLinearAlgebra]]
 deps = ["DimensionalData", "LinearAlgebra", "SparseArrays", "Statistics", "Unitful"]
 git-tree-sha1 = "80eeffbabaae4bbed0a3e4a6f62eda3dafda2ec5"
-repo-rev = "main"
-repo-url = "https://github.com/ggebbie/UnitfulLinearAlgebra.jl"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 version = "0.3.0"
 
