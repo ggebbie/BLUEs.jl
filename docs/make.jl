@@ -1,5 +1,5 @@
 using BLUEs
-using UnitfulLinearAlgebra # incl b.c. non-registered
+#using UnitfulLinearAlgebra # incl b.c. non-registered
 using Documenter
 
 DocMeta.setdocmeta!(BLUEs, :DocTestSetup, :(using BLUEs); recursive=true)
