@@ -393,7 +393,7 @@ end
 """
 function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
-    return n ⋅ n
+    return sqrt(n ⋅ n)
 end
 
 """
@@ -405,7 +405,7 @@ end
 function controladj(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
     
     if p.x₀ isa DimArray
-        if isnothing(dim3) #no state var, assume consistent units 
+        if isnothing(dim3) #no state var, assume consistent units, 2D
             Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
         else #there is a statevariable and we need to index 
             Δx = UnitfulMatrix(Measurements.value.(vec(x̃.x[:, :, At(dim3)] - p.x₀[:, :, At(dim3)])))
