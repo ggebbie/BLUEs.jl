@@ -414,7 +414,7 @@ function controladj(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedPr
     else
         Δx = x̃.v - p.x₀
     end
-    return Δx ⋅ Δx 
+    return sqrt(Δx ⋅ Δx)
 end
 
 """
