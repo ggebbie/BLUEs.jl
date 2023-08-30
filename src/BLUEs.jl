@@ -586,6 +586,7 @@ end
 function convolve(x::AbstractDimArray,E::AbstractDimArray)
     tnow = last(first(dims(x)))
     lags = first(dims(E))
+    println("CONVOLVE WARNING: ISSUE 48") 
     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
 end
 """
@@ -601,8 +602,10 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray, coeffs::UnitfulMatrix
 end
 
 function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
-    lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+    lags = first(dims(E))  
+    #return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+    t1 = x.dims[1][1]
+    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags) if t - ll >= t1])
 end
 
 #coeffs signifies that x is 3D 
@@ -632,8 +635,8 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     elseif ndims(M) == 3
 
         # do a sample calculation to get units.
-        Msmall = M[:,:,1]
-        yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume everything has the same units
+        Msmall = M[:,:,1] # assumes M.dims[3] == y.dims[2]
+        yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume y has the same units
 
         y = DimArray(zeros(length(Tx),last(size(M)))yunit,(Tx,last(dims(M))))
         for (ii,vv) in enumerate(last(dims(M)))

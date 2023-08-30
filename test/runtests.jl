@@ -262,7 +262,7 @@ include("test_functions.jl")
             # 1) 2 state variables
             # 2) timeseries of obs
             # 3) Circulation with lag
-            cases = ((false,false,false),(true,false,false),(true,true,true))
+            cases = ((false,false,false),(true,false,false),(true,true,true), (false, true, true))
 
             #(statevars,timeseries,lag) = cases[3] # for interactive use
             for (statevars,timeseries,lag) in cases
