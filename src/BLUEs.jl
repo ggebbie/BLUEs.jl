@@ -13,6 +13,8 @@ import Base: show, getproperty, propertynames, (*), (+), (-), sum
 #import Base.:*
 import LinearAlgebra: pinv, transpose
 
+import UnitfulLinearAlgebra: diag 
+
 #struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
 """
@@ -131,7 +133,7 @@ end
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        return .√diag(x.C)
+        return .√diag(x)
     elseif d === :x
         # x.v can be a UnitfulVector, so wrap with Matrix
         if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
@@ -147,7 +149,7 @@ function getproperty(x::Estimate, d::Symbol)
 end
 function getproperty(x::DimEstimate, d::Symbol)
     if d === :σ
-        return .√diag(x.C)
+        return .√diag(x)
     elseif d === :x
 
         # x.v can be a UnitfulVector, so wrap with vec
@@ -169,6 +171,8 @@ function getproperty(x::DimEstimate, d::Symbol)
     end
 end
 
+diag(x::Estimate) = [getindexqty(x.C, i, i) for i in 1:first(size(x.C))]
+diag(x::DimEstimate) = [getindexqty(x.C, i, i) for i in 1:first(size(x.C))]
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 Base.propertynames(x::DimEstimate) = (:x, :σ, fieldnames(typeof(x))...)
 
