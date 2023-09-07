@@ -605,20 +605,8 @@ function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))  
     #return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
     t1 = x.dims[1][1]
+    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags) if t - ll >= t1 - 2 * unit.(t1)])
 
-    #following line gives really large values in the first column of E 
-    #return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
-
-    #for some reason, writing this as a list comprehension was causing issues for me
-    #this is still very fast, and isn't giving me issues 
-    v = zeros(length(lags))
-    for (ii, ll) in enumerate(lags)
-        if t - ll >= t1 - 2*unit.(t1) #at 1 yr, modes haven't made it there yet
-            v[ii] = E[ii, :] ⋅ x[Near(t-ll), :]
-        end
-    end
-    return sum(v)
-   
 end
 
 #coeffs signifies that x is 3D 
