@@ -6,7 +6,7 @@ using DimensionalData
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
-export rmserror, controladj
+export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
 
@@ -397,12 +397,17 @@ function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProb
 end
 
 """
-    function controladj
+    function rmscontrol
 
     compute (ũ-u₀)ᵀ(ũ-u₀), how much are we adjusting the control?
     unweighted `controlcost`
+
+    # Args 
+    -`x̃`: DimEstimate
+    -`p`: problem
+    -`dim3`: allows to access third dimension, which is assumed to be state var. dim.
 """
-function controladj(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
+function rmscontrol(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
     
     if p.x₀ isa DimArray
         if isnothing(dim3) #no state var, assume consistent units, 2D
