@@ -502,6 +502,7 @@ function impulseresponse(funk::Function,x,args...)
     Ep = zeros(length(y₀), length(x))
     
     for rr in eachindex(x)
+        println("Index " * string(rr) * " of " *string(length(eachindex(x)))) 
         #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
             u = Quantity.(zeros(length(x)), unit.(vec(x)))
@@ -604,9 +605,10 @@ end
 function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
     lags = first(dims(E))  
     #return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
-    t1 = x.dims[1][1]
-    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags) if t - ll >= t1 - 2 * unit.(t1)])
-
+    #t1 = x.dims[1][1]
+    xtime = x.dims[1]
+    #return sum([E[At(ll),:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags) if t - ll >= t1 - 2 * unit.(t1)])
+    return sum([E[At(ll),:] ⋅ x[At(t-ll),:] for (ii,ll) in enumerate(lags) if t-ll in xtime])
 end
 
 #coeffs signifies that x is 3D 
@@ -642,7 +644,7 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
 
         y = DimArray(zeros(length(Tx),last(size(M)))yunit,(Tx,last(dims(M))))
         for (ii,vv) in enumerate(last(dims(M)))
-            
+            #iterate over core 
             Msmall = M[:,:,ii]
             #if ii == 1 @show which(convolve, typeof((x, Msmall, Tx))) end #632
             y[:,ii] = convolve(x,Msmall,Tx)
