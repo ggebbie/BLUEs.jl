@@ -347,7 +347,7 @@ include("test_functions.jl")
                 @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
                 #just checking sure these work, not quite sure what a good test value would be 
                 rmserror(x̃, problem)
-                statevars ? controladj(x̃, problem, :θ) : controladj(x̃, problem)
+                statevars ? rmscontrol(x̃, problem, :θ) : rmscontrol(x̃, problem)
             end
         end
 
