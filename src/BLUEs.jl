@@ -4,7 +4,7 @@ module BLUEs
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
 
-using Distributed, SharedArrays
+using Base.Threads
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
@@ -501,10 +501,11 @@ function impulseresponse(funk::Function,x,args...)
     y₀ = funk(x,args...)
     #Eunits = expectedunits(y₀,x)
     #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
-    Ep = SharedArray(zeros(length(y₀), length(x)))
+    Ep = zeros(length(y₀), length(x))
     
-    @distributed for rr in eachindex(x)
-        println("Index " * string(rr) * " of " *string(length(eachindex(x)))) 
+    Threads.@threads for rr in eachindex(x)
+    #for rr in eachindex(x)
+        #println("Index " * string(rr) * " of " *string(length(eachindex(x)))) 
         #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
             u = Quantity.(zeros(length(x)), unit.(vec(x)))
