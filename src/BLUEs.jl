@@ -315,16 +315,22 @@ end
         Solve underdetermined problem
 """
 function solve(up::UnderdeterminedProblem)
-
+    if up.y isa DimArray
+            y = UnitfulMatrix(ustrip.(vec(up.y)), unit.(vec(up.y)))
+        else
+            y = up.y
+    end
+   
     if ismissing(up.x₀)
-        n = up.y
+        n = y
     else
         if up.x₀ isa DimArray
-            x₀ = UnitfulMatrix(up.x₀[:])
+            x₀ = UnitfulMatrix(ustrip.(vec(up.x₀)), unit.(vec(up.x₀)))
         else
             x₀ = up.x₀
         end
-        n = up.y - up.E*x₀
+
+        n = y - up.E*x₀
     end
     Cxy = up.Cxx*transpose(up.E)
     Cyy = up.E*Cxy + up.Cnn
@@ -374,7 +380,12 @@ end
     Cost function contribution from observations
 """
 function datacost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
-    n = p.y - p.E*x̃.v
+    if p.y isa DimArray
+        y = UnitfulMatrix(ustrip.(vec(p.y)), unit.(vec(p.y)))
+    else
+        y = p.y
+    end
+    n = y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
         Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
@@ -388,7 +399,7 @@ end
 """
 function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
     if p.x₀ isa DimArray
-        Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
+        Δx = x̃.v - UnitfulMatrix(ustrip.(vec(p.x₀)), unit.(vec(p.x₀)))
     else
         Δx = x̃.v - p.x₀
     end
