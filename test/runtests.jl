@@ -347,7 +347,9 @@ include("test_functions.jl")
                 @test within(getindexqty(yvec, 1),vec((E*x̃).v)[1],3σₙ) # within 3-sigma
                 @test cost(x̃,problem) < 5e-2 # no noise in ob
                 @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
-
+                #just checking sure these work, not quite sure what a good test value would be 
+                rmserror(x̃, problem)
+                statevars ? rmscontrol(x̃, problem, :θ) : rmscontrol(x̃, problem)
             end
         end
 

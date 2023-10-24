@@ -6,8 +6,10 @@ using DimensionalData
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
+export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
+
 
 import Base: show, getproperty, propertynames, (*), (+), (-), sum
 #import Base.:*
@@ -392,6 +394,43 @@ function datacost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProb
         Cnn⁻¹ = p.Cnn⁻¹
     end
     return symmetric_innerproduct(n,Cnn⁻¹)
+end
+
+"""
+    function rmserror
+
+    compute nᵀn, how closely are we fitting the data?
+    unweighted `datacost`
+"""
+function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
+    n = p.y - p.E*x̃.v
+    return sqrt(n ⋅ n)
+end
+
+"""
+    function rmscontrol
+
+    compute (ũ-u₀)ᵀ(ũ-u₀), how much are we adjusting the control?
+    unweighted `controlcost`
+
+    # Args 
+    -`x̃`: DimEstimate
+    -`p`: problem
+    -`dim3`: allows to access third dimension, which is assumed to be state var. dim.
+"""
+function rmscontrol(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
+    
+    if p.x₀ isa DimArray
+        if isnothing(dim3) #no state var, assume consistent units, 2D
+            Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
+        else #there is a statevariable and we need to index 
+            Δx = UnitfulMatrix(Measurements.value.(vec(x̃.x[:, :, At(dim3)] - p.x₀[:, :, At(dim3)])))
+        end
+        
+    else
+        Δx = x̃.v - p.x₀
+    end
+    return sqrt(Δx ⋅ Δx)
 end
 
 """
