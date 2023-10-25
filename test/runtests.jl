@@ -87,7 +87,7 @@ include("test_functions.jl")
     end
 
     @testset "left-uniform problem with prior info" begin
-	y = UnitfulMatrix([-1.], [permil])
+	y = UnitfulMatrix([-1.9permil])
 	σₙ = 0.2permil
 	a = -0.24permil*K^-1
 	γδ = 1.0permil^-2 # to keep units correct, have two γ (tapering) variables
@@ -320,36 +320,32 @@ include("test_functions.jl")
                 @test first(E*UnitfulMatrix(vec(x₀))) .== first(predict(x₀))
             
                 # Julia doesn't have method to make scalar into vector
-                !(y isa AbstractVector) && (y = UnitfulMatrix(ustrip.([y]), unit.([y])))
+                !(y isa AbstractVector) && (y = [y])
 
                 # Does E matrix work properly?
-                xvec = UnitfulMatrix(ustrip.(vec(x)), unit.(vec(x)))
-                ỹ = E*xvec
-                for jj in eachindex(vec(y))
+                ỹ = E*UnitfulMatrix(vec(x))
+                for jj in eachindex(y)
                     @test isapprox(vec(y)[jj],vec(ỹ)[jj])
                 end
-                yvec = UnitfulMatrix(ustrip.(vec(y)), unit.(vec(y))) #convert from DA
-                x̂ = E\yvec
-                for jj in eachindex(vec(y))
-                    @test isapprox(vec(y)[jj],getindexqty(E*x̂, jj))
+                x̂ = E\y
+                for jj in eachindex(y)
+                    @test isapprox(vec(y)[jj],vec(E*x̂)[jj])
                 end
 
                 # now in a position to use BLUEs to solve
                 σₙ = 0.01
                 σₓ = 100.0
 
-                Cnn = Diagonal(fill(σₙ^2,length(y)),unitrange(yvec),unitrange(yvec).^-1)
+                Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1)
                 Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
-                problem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
+                problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
 
                 # when x₀ is a DimArray, then x̃ is a DimEstimate
                 x̃ = solve(problem) # ::DimEstimate
-                @test within(getindexqty(yvec, 1),vec((E*x̃).v)[1],3σₙ) # within 3-sigma
+                @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
                 @test cost(x̃,problem) < 5e-2 # no noise in ob
                 @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
-                #just checking sure these work, not quite sure what a good test value would be 
-                rmserror(x̃, problem)
-                statevars ? rmscontrol(x̃, problem, :θ) : rmscontrol(x̃, problem)
+
             end
         end
 
@@ -389,12 +385,10 @@ include("test_functions.jl")
                 y = predict(x)
 
                 # test compatibility
-                x₀vec = UnitfulMatrix(ustrip.(vec(x₀)), unit.(vec(x₀)))
-                @test first(E*x₀vec) .== first(predict(x₀))
+                @test first(E*UnitfulMatrix(vec(x₀))) .== first(predict(x₀))
             
                 # Does E matrix work properly?
-                xvec = UnitfulMatrix(ustrip.(vec(x)), unit.(vec(x)))
-                ỹ = E*UnitfulMatrix(vec(xvec))
+                ỹ = E*UnitfulMatrix(vec(x))
                 for jj in eachindex(y)
                     @test isapprox(vec(y)[jj],vec(ỹ)[jj])
                 end
@@ -411,9 +405,7 @@ include("test_functions.jl")
                 σₓ = 10.0
                 Cnn = Diagonal(fill(σₙ^2,length(y)),vec(unit.(y)),vec(unit.(y).^-1))
                 Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
-                
-                yvec = UnitfulMatrix(ustrip.(vec(y)), unit.(vec(y)))
-                problem = UnderdeterminedProblem(yvec,E,Cnn,Cxx,x₀)
+                problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
 
                 # when x₀ is a DimArray, then x̃ is a DimEstimate
                 x̃ = solve(problem)
