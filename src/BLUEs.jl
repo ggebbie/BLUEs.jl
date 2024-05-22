@@ -1,6 +1,5 @@
 module BLUEs
 
-#using Revise
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
 
@@ -10,12 +9,8 @@ export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
 
-
 import Base: show, getproperty, propertynames, (*), (+), (-), sum
-#import Base.:*
 import LinearAlgebra: pinv, transpose
-
-#struct Measurement{T<:AbstractFloat} <: AbstractFloat
 
 """
     struct Estimate{Tv <: Number,TC <: Number} 
@@ -74,7 +69,6 @@ end
 """
 OverdeterminedProblem(y::Union{<: AbstractVector,NamedTuple},E::Union{<: AbstractMatrix,NamedTuple},Cnn⁻¹::Union{<:AbstractMatrix,NamedTuple}) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
 
-
 """
     struct UnderdeterminedProblem
 
@@ -94,14 +88,12 @@ struct UnderdeterminedProblem
     x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
 end
 
-
 """
     function UnderdeterminedProblem
 
     generates UnderdeterminedProblem structure with x₀ = missing, still requires Cxx 
 """
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
-
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
     summary(io, x); println(io)
@@ -174,10 +166,6 @@ end
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 Base.propertynames(x::DimEstimate) = (:x, :σ, fieldnames(typeof(x))...)
 
-# Template code to make some property names private
-#Base.propertynames(x::Estimate, private::Bool=false) =
-#    private ? (:U, :U⁻¹, :V, :V⁻¹,  fieldnames(typeof(F))...) : (:U, :U⁻¹, :S, :V, :V⁻¹)
-
 """
     function solve
 
@@ -193,6 +181,7 @@ function solve(op::OverdeterminedProblem; alg=:textbook)
         return solve_hessian(op)
     end
 end
+
 """
 function solve_textbook
 
@@ -269,9 +258,6 @@ function gradient(op::OverdeterminedProblem)
     end
  end
 
-#parse error
-#hessian(op::OverdeterminedProblem) = ismissing(op.Cxx⁻¹) ? return transpose(op.E)*(op.Cnn⁻¹*op.E) : return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
-
 """
 function hessian
 
@@ -291,9 +277,6 @@ end
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
 symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
-# UnitfulLinearAlgebra returns UnitfulMatrix type, convert to scalar
-#symmetric_innerproduct(E::AbstractUnitfulMatrix) = Matrix(transpose(E)*E)
-#symmetric_innerproduct(E::AbstractUnitfulMatrix,Cnn⁻¹::AbstractUnitfulMatrix) = Matrix(transpose(E)*(Cnn⁻¹*E))
 """
     for NamedTuple, add up each Hessian contribution
 """
@@ -452,9 +435,10 @@ function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedP
     return symmetric_innerproduct(Δx,Cxx⁻¹)
 end
 
-#Matrix multiply, Mx
 """
     multiplication for `NamedTuple`s
+
+    #Matrix multiply, Mx
 """
 function *(A::NamedTuple, b::AbstractVector) 
     # Update to use parametric type to set type of Vector
@@ -505,6 +489,7 @@ function -(A::NamedTuple,B::NamedTuple)
     end
     return NamedTuple{keys(A)}(c)
 end
+
 function +(A::NamedTuple,B::NamedTuple) 
     
     # Update to use parametric type to set type of Vector
@@ -515,6 +500,7 @@ function +(A::NamedTuple,B::NamedTuple)
     end
     return NamedTuple{keys(A)}(c)
 end
+
 function sum(A::NamedTuple) 
     # Update to use parametric type to initialize output
     Asum = 0 * A[1] # a kludge
@@ -523,6 +509,7 @@ function sum(A::NamedTuple)
     end
     return Asum
 end
+
 function LinearAlgebra.transpose(A::NamedTuple) 
     
     # Update to use parametric type to set type of Vector
@@ -578,7 +565,6 @@ function impulseresponse(funk::Function,x,args...)
             end
         end
     end
-    
     
     # This function could use vcat to be cleaner (but maybe slower)
     # Note: Need to add ability to return sparse matrix 
@@ -671,10 +657,7 @@ function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector
     else
         error("M has wrong number of dims") 
     end
-    
-    
 end
-
 
 function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     if ndims(M) == 2 
@@ -698,13 +681,6 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     end
 end
 
-# function convolve(x::AbstractDimArray,F::Tuple)
-#     E = F[1]
-#     tnow = last(first(dims(x)))
-#     lags = first(dims(E))
-#     return sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
-# end
-
 """
     function predictobs(funk,x...)
 
@@ -712,10 +688,7 @@ end
     y = funk(x...)
     Turns out to not be useful so far.
 """
-function predictobs(funk,x...)
-    #x = addcontrol(x₀,u) 
-    return y = funk(x...)
-end
+predictobs(funk,x...) = funk(x...)
 
 function addcontrol(x₀::AbstractDimArray,u)
 

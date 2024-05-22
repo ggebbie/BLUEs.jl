@@ -14,13 +14,12 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [compat]
-DimensionalData = "0.24, 0.25"
 Measurements = "2"
 Statistics = "1"
 ToeplitzMatrices = "0.7, 0.8"
 Unitful = "1"
 UnitfulLinearAlgebra = "0.3"
-julia = "1.8"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
