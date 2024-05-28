@@ -8,6 +8,7 @@ export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
+#export DimEstimate
 
 import Base: show, getproperty, propertynames, (*), (+), (-), sum
 import LinearAlgebra: pinv, transpose
@@ -26,22 +27,7 @@ struct Estimate{Tv <: Number,TC <: Number}
     C :: AbstractMatrix{TC}
 end
 
-"""
-    struct DimEstimate{Tv <: Number,TC <: Number} 
-    
-    A structure with some vector of values v and associated covariance matrix C.
-Differs from `Estimate` in that axis dimensions are added.
-
-# Fields
--   `v :: AbstractVector{Tv}`
--   `C :: AbstractMatrix{TC}`
--   `dims :: Tuple`
-"""
-struct DimEstimate{Tv <: Number,TC <: Number} 
-    v :: AbstractVector{Tv}
-    C :: AbstractMatrix{TC}
-    dims :: Tuple
-end
+#include("dim_estimate.jl")
 
 """
     struct OverdeterminedProblem
@@ -95,7 +81,8 @@ end
 """
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
+    #function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
     summary(io, x); println(io)
     println(io, "Estimate and 1σ uncertainty")
     show(io, mime, x.x)
@@ -139,32 +126,8 @@ function getproperty(x::Estimate, d::Symbol)
         return getfield(x, d)
     end
 end
-function getproperty(x::DimEstimate, d::Symbol)
-    if d === :σ
-        return .√diag(x.C)
-    elseif d === :x
-
-        # x.v can be a UnitfulVector, so wrap with vec
-        # wrapping with Matrix causes type consistency issues
-        if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
-            #v = Matrix(x.v)
-            v = vec(x.v)
-        else
-            v = x.v
-        end
-
-        # types of v and x.σ should be consistent
-        # should there be a conditional for σ (like v) above?
-        tmp = measurement.(v,x.σ)
-        return DimArray(reshape(tmp,size(x.dims)),x.dims)
-    #return x.v .± x.σ
-    else
-        return getfield(x, d)
-    end
-end
 
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
-Base.propertynames(x::DimEstimate) = (:x, :σ, fieldnames(typeof(x))...)
 
 """
     function solve
@@ -300,21 +263,11 @@ end
         Solve underdetermined problem
 """
 function solve(up::UnderdeterminedProblem)
-    if up.y isa DimArray
-            y = UnitfulMatrix(ustrip.(vec(up.y)), unit.(vec(up.y)))
-        else
-            y = up.y
-    end
-   
+    y = up.y
     if ismissing(up.x₀)
         n = y
     else
-        if up.x₀ isa DimArray
-            x₀ = UnitfulMatrix(ustrip.(vec(up.x₀)), unit.(vec(up.x₀)))
-        else
-            x₀ = up.x₀
-        end
-
+        x₀ = up.x₀
         n = y - up.E*x₀
     end
     Cxy = up.Cxx*transpose(up.E)
@@ -322,11 +275,7 @@ function solve(up::UnderdeterminedProblem)
     v = Cxy*(Cyy \ n)
     (~ismissing(up.x₀)) && (v += x₀)
     P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
-    if up.x₀ isa DimArray
-        return DimEstimate(v,P,dims(up.x₀))
-    else
-        return Estimate(v,P)
-    end
+    return Estimate(v,P)
 end
 
 """    
@@ -334,8 +283,6 @@ end
     error propagation.
 """
 *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
-*(F::UnitfulDimMatrix,x::DimEstimate) = DimEstimate(F*x.v,F*x.C*transpose(F),x.dims)
-*(F::UnitfulMatrix,x::DimEstimate) = Estimate(F*x.v,F*x.C*transpose(F))
 
 """    
     Matrix addition for Estimate includes
@@ -343,7 +290,6 @@ end
     Recursive Least Squares, "Dynamical Insights from Data" class notes
 """
 +(x::Estimate,y::Estimate) = error("not implemented yet")
-+(x::DimEstimate,y::DimEstimate) = error("not implemented yet")
 
 """
     Compute cost function
@@ -354,7 +300,9 @@ function cost(x̃::Estimate,op::OverdeterminedProblem)
     isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
     return J
 end
-function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
+
+function cost(x̃::Estimate,up::UnderdeterminedProblem)
+#function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
    Jdata = datacost(x̃,up)
    Jcontrol = controlcost(x̃,up) 
    J = Jdata + Jcontrol
@@ -364,12 +312,8 @@ end
 """
     Cost function contribution from observations
 """
-function datacost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
-    if p.y isa DimArray
-        y = UnitfulMatrix(ustrip.(vec(p.y)), unit.(vec(p.y)))
-    else
-        y = p.y
-    end
+function datacost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+    y = p.y
     n = y - p.E*x̃.v
     if typeof(p) == UnderdeterminedProblem
         Cnn⁻¹ = inv(p.Cnn) # not possible for NamedTuple
@@ -385,7 +329,8 @@ end
     compute nᵀn, how closely are we fitting the data?
     unweighted `datacost`
 """
-function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
+function rmserror(x̃::Estimate, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
+#function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     return sqrt(n ⋅ n)
 end
@@ -401,37 +346,22 @@ end
     -`p`: problem
     -`dim3`: allows to access third dimension, which is assumed to be state var. dim.
 """
-function rmscontrol(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
-    
-    if p.x₀ isa DimArray
-        if isnothing(dim3) #no state var, assume consistent units, 2D
-            Δx = x̃.v - UnitfulMatrix(vec(p.x₀))
-        else #there is a statevariable and we need to index 
-            Δx = UnitfulMatrix(Measurements.value.(vec(x̃.x[:, :, At(dim3)] - p.x₀[:, :, At(dim3)])))
-        end
-        
-    else
-        Δx = x̃.v - p.x₀
-    end
+function rmscontrol(x̃::Estimate, p::Union{OverdeterminedProblem, UnderdeterminedProblem}, dim3 = nothing)
+    Δx = x̃.v - p.x₀
     return sqrt(Δx ⋅ Δx)
 end
 
 """
     Cost function contribution from control vector
 """
-function controlcost( x̃::Union{Estimate,DimEstimate}, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
-    if p.x₀ isa DimArray
-        Δx = x̃.v - UnitfulMatrix(ustrip.(vec(p.x₀)), unit.(vec(p.x₀)))
-    else
-        Δx = x̃.v - p.x₀
-    end
+function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,UnderdeterminedProblem})
+    Δx = x̃.v - p.x₀
     
     if typeof(p) == UnderdeterminedProblem
         Cxx⁻¹ = inv(p.Cxx) # not possible for NamedTuple
     elseif typeof(p) == OverdeterminedProblem
         Cxx⁻¹ = p.Cxx⁻¹
     end
-    #return transpose(Δx)*(Cxx⁻¹*Δx)
     return symmetric_innerproduct(Δx,Cxx⁻¹)
 end
 

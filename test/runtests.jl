@@ -5,7 +5,6 @@ using LinearAlgebra
 using Statistics
 using Unitful
 using UnitfulLinearAlgebra
-using Measurements
 using ToeplitzMatrices
 using SparseArrays
 using DimensionalData
@@ -18,14 +17,12 @@ include("test_functions.jl")
 @testset "BLUEs.jl" begin
 
     @testset "error propagation" begin
+        using Measurements
 
         a = randn(5) .± rand(5)
         E = randn(5,5)
 
         aerr = Measurements.uncertainty.(a);
-        #x = Estimate(Measurements.value.(a),
-        #             aerr*transpose(aerr));
-
         x = Estimate(Measurements.value.(a),
                      Diagonal(aerr.^2))
 
@@ -36,13 +33,44 @@ include("test_functions.jl")
 
     @testset "issue 41" begin
         #what if the type is a Quantity but no units
-        urange3 = fill(NoUnits, 25)
-        y3 = UnitfulMatrix(rand(25), urange3)
-        Cyy3 = UnitfulMatrix(rand(25, 25), urange3, urange3 .^ -1)
-        Cyy3 isa UnitfulLinearAlgebra.AbstractUnitfulMatrix
-        dCyy3 = diag(Cyy3)
-        # test whether next line can be shown
-        de3 = DimEstimate(y3, Cyy3, (X(1:5), Y(1:5)))
+
+        @dim YearCE "years Common Era"
+        @dim StateVariable "state variable"
+        years = (1990:2000)u"yr"
+        statevariables = [:θ, :δ¹⁸O] 
+
+        nx = length(statevariables); ny = length(years)
+        xdims = (StateVariable(statevariables),
+            YearCE(years))
+            
+        xparent = Matrix{Quantity}(undef, nx, ny)
+        xx = 1
+        stateunits = [u"K", u"permille"]
+        for xx in 1:nx
+            for yy in 1:ny
+                xparent[xx,yy] = Quantity(rand(),stateunits[xx])
+            end
+        end
+        y3 = DimArray(xparent, xdims)
+
+        Pparent = Matrix(undef,nx,ny)
+        for xx in 1:nx
+            for yy in 1:ny
+                colparent = Matrix{Quantity}(undef, nx, ny)
+                for xx2 in 1:nx
+                    for yy2 in 1:ny
+                        if xx2 == xx && yy2 == yy
+                            colparent[xx2,yy2] = Quantity(1.0,stateunits[xx]*stateunits[xx2])
+                        else
+                            colparent[xx2,yy2] = Quantity(0.0,stateunits[xx]*stateunits[xx2])
+                        end
+                    end
+                end
+                Pparent[xx, yy] = DimArray(colparent, xdims)
+            end
+        end
+        P3 = DimArray(Pparent, xdims)
+        de3 = DimEstimate(y3, P3)
     end
     
     @testset "mixed signals: dimensionless matrix" begin
