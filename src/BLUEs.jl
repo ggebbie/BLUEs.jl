@@ -27,8 +27,6 @@ struct Estimate{Tv <: Number,TC <: Number}
     C :: AbstractMatrix{TC}
 end
 
-#include("dim_estimate.jl")
-
 """
     struct OverdeterminedProblem
 
@@ -73,6 +71,9 @@ struct UnderdeterminedProblem
     Cxx :: Union{AbstractMatrix}
     x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
 end
+
+include("dim_estimate.jl")
+include("base.jl")
 
 """
     function UnderdeterminedProblem
@@ -179,15 +180,19 @@ function solve_hessian
 
     Solving y = Ex
 
-    x̃ = -1/2 (Eᵀ(Cnn⁻¹E))⁻¹ -(Eᵀ 2(Cnn⁻¹y))
-    Cx̃x̃ = (Eᵀ(Cnn⁻¹E))⁻¹
-    (maybe???? doublecheck with Jake) 
+H = Eᵀ(Cnn⁻¹E) + Cxx⁻¹
+∂J/∂x =  -E^T ∂J/∂n
+∂J/∂n = 2n
+n = y - Ex₀
+x̃ = -1/2 H⁻¹ ∂J/∂x
 """
 function solve_hessian(op::OverdeterminedProblem)
     #the two following functions will iterate over NamedTuples
     ∂J∂x = gradient(op) #-(Eᵀ∂J∂n) 
     H⁻¹ = inv(hessian(op)) #hessian = Eᵀ(Cnn⁻¹E) or Eᵀ(Cnn⁻¹E) + Cxx⁻¹
-    x = -(1//2)*H⁻¹*∂J∂x 
+    x = -(1//2)*H⁻¹*∂J∂x
+    #H = hessian(op) #hessian = Eᵀ(Cnn⁻¹E) or Eᵀ(Cnn⁻¹E) + Cxx⁻¹
+    #x = -(1//2)*(H\∂J∂x)
     (~ismissing(op.x₀)) && (x += op.x₀)
     return Estimate( x, H⁻¹)
 end

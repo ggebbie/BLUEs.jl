@@ -12,7 +12,7 @@ using DimensionalData:@dim
 const permil = u"permille"; const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
-#include("test_functions.jl")
+include("test_functions.jl")
 
 @testset "BLUEs.jl" begin
 

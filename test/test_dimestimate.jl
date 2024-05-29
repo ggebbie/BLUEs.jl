@@ -18,32 +18,39 @@
         # 1) 1 state variable (implicit)
         # 2) Obs at one end time
         # 3) No circulation lag
-            
+        σₙ = 1.0
         E,x = random_source_water_matrix_vector_pair(m)
-
+        if !use_units
+            E = DimArray(parent(E),dims(E))
+            x = DimArray(parent(x),dims(x))
+        end
+        
         # Run model to predict interior location temperature
-        y = E*x # E::UnitfulDimMatrix
+        y = E*x # E::UnitfulDimMatrix or DimArray
 
         # do slices work?
         E[At(:loc1),At(:NATL)]
         E[:,At(:ANT)]
 
         # invert for x.  
-        x̃ = E\y
+        x̃ = E\y # extend backslash (matrix left divide) for DimMatrix
 
-            σₙ = 1.0
+        if use_units
             Cnndims = (first(dims(E)),first(dims(E)))
             Cnn⁻¹ = Diagonal(fill(σₙ^-1,m),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
-
-            problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-            x̃ = solve(problem,alg=:hessian)
-            x̃ = solve(problem,alg=:textbook)
-
-            #@test x ≈ x̃.v
-            @test cost(x̃,problem) < 1e-5 # no noise in ob
-            #@test within(x̃.v,x,1.0e-5) # deprecate `within`?
-            @test isapprox(x̃.v,x,atol=1.0e-5)
+        else
+            Cnndims = (first(dims(E)),first(dims(E)))
+            Cnn⁻¹ = DimArray(Diagonal(fill(σₙ^-1,m)),Cnndims)
         end
+
+        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        x̃ = solve(problem,alg=:hessian)
+        x̃ = solve(problem,alg=:textbook)
+
+        @test cost(x̃,problem) < 1e-5 # no noise in ob
+        @test isapprox(x̃.v,x,atol=1.0e-5)
+
+    end
 
         @testset "E:: by impulse response, M:: 2D DimArray (almost complete parameter suite but observations at one location only)" begin
             # many surface regions, with circulation lag, obs:one time or timeseries, one or two state variables" 
