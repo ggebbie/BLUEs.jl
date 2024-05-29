@@ -10,7 +10,7 @@ export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
 #export DimEstimate
 
-import Base: show, getproperty, propertynames, (*), (+), (-), sum
+import Base: show, getproperty, propertynames, *, +, -, sum
 import LinearAlgebra: pinv, transpose
 
 """
@@ -113,7 +113,11 @@ end
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        return .√diag(x.C)
+        if x.C isa AbstractDimMatrix
+            return DimArray(.√diag(x.C),first(dims(x.C)))
+        else
+            return .√diag(x.C)
+        end
     elseif d === :x
         # x.v can be a UnitfulVector, so wrap with Matrix
         if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
