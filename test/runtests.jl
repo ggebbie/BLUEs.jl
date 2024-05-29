@@ -24,7 +24,7 @@ ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
     @testset "with units" begin 
         use_units = true
- #       include("test_estimate.jl")
+        include("test_estimate.jl")
         #include("test_dimestimate.jl")
     end
 
