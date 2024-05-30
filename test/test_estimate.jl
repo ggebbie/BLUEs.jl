@@ -80,9 +80,11 @@ end
 	γT = 1.0K^-2
         E = UnitfulMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
         x₀ = UnitfulMatrix([-1.0permil, 4.0K])
+
         # "overdetermined, problem 1.4" 
         Cxx⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K])
 	Cnn⁻¹  = Diagonal([σₙ.^-2],[permil^-1],[permil])
+
         # "underdetermined, problem 2.1" 
 	Cnn  = Diagonal([σₙ.^2],[permil],[permil^-1])
         Cxx = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1])
@@ -106,13 +108,13 @@ end
     end
 
     oproblem = OverdeterminedProblem(y,E,Cnn⁻¹,Cxx⁻¹,x₀)
-    uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
-
     x̃1 = solve(oproblem)
     @test cost(x̃1,oproblem) < 1 # rough guide, coul
 
+    uproblem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
     x̃2 = solve(uproblem)
     @test cost(x̃2,uproblem) < 1 # rough guide, could ge
+
     # same answer both ways?
     @test cost(x̃2,uproblem) ≈ cost(x̃1,oproblem)
 end
@@ -138,7 +140,8 @@ end
         γ = [1.0e1kg^2/g^2, 1.0e2kg^2*d^2/g^2, 1.0e3kg^2*d^4/g^2, 1.0e4kg^2*d^6/g^2]
 
         Cxx⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
-        x₀ = UnitfulMatrix(zeros(N).*unitdomain(Cxx⁻¹))
+        #x₀ = UnitfulMatrix(zeros(N).*unitdomain(Cxx⁻¹))
+        x₀ = zeros(N).*unitdomain(Cxx⁻¹)
     else
         t = (1:M)
         E =hcat(t.^0, t, t.^2, t.^3)

@@ -2,6 +2,9 @@ module BLUEs
 
 using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
 using DimensionalData
+using DimensionalData:AbstractDimArray
+using DimensionalData:AbstractDimMatrix
+using DimensionalData:AbstractDimVector
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export solve, show, cost, datacost, controlcost
@@ -14,17 +17,17 @@ import Base: show, getproperty, propertynames, *, +, -, sum
 import LinearAlgebra: pinv, transpose
 
 """
-    struct Estimate{Tv <: Number,TC <: Number} 
-    
-a structure with some vector of values v and associated covariance matrix C
+struct Estimate{Tv <: Number, TP <: Number, Nv, NP}
+
+a structure with some vector of values x and associated uncertainty matrix P
 
 # Fields
--   `v :: AbstractVector{Tv}`
--   `C :: AbstractMatrix{TC}`
+-   `v :: AbstractArray{T, Nv}`
+-   `P :: AbstractArray{T, NP}`
 """
-struct Estimate{Tv <: Number,TC <: Number} 
-    v :: AbstractVector{Tv}
-    C :: AbstractMatrix{TC}
+struct Estimate{Tv <: Number, TP <: Number, Nv, NP} 
+    v :: AbstractArray{Tv, Nv}
+    P :: AbstractArray{TP, NP}
 end
 
 """
@@ -72,7 +75,7 @@ struct UnderdeterminedProblem
     x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
 end
 
-include("dim_estimate.jl")
+#include("dim_estimate.jl")
 include("base.jl")
 
 """
@@ -107,16 +110,16 @@ end
 
 # Fields of Estimate
 - `x::Vector{Measurement}`: Estimate and 1σ uncertainty
-- `σ::Vector{Number}`: 1σ uncertainty
-- `v::Vector{Number}`: central value of estimate
-- `C::Matrix{Number}`: estimate uncertainty matrix
+- `err::Vector{Number}`: 1σ uncertainty
+- `val::Vector{Number}`: central value of estimate
+- `P::Matrix{Number}`: estimate uncertainty matrix
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        if x.C isa AbstractDimMatrix
-            return DimArray(.√diag(x.C),first(dims(x.C)))
+        if x.P isa AbstractDimArray # requires N = 2 where `diag` is defined
+            return DimArray(.√diag(x.P),first(dims(x.P)))
         else
-            return .√diag(x.C)
+            return .√diag(x.P)
         end
     elseif d === :x
         # x.v can be a UnitfulVector, so wrap with Matrix
@@ -169,7 +172,7 @@ function solve_textbook
 function solve_textbook(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
     ECE = transpose(op.E)*CE
-    if ismissing(op.Cxx⁻¹)  
+    if ismissing(op.Cxx⁻¹)
         return Estimate( ECE \ (transpose(CE)*op.y), inv(ECE))
     else
         # prior information available
@@ -179,6 +182,7 @@ function solve_textbook(op::OverdeterminedProblem)
         return Estimate( ECE \ rhs, inv(ECE))
     end
 end
+
 """
 function solve_hessian
 
@@ -291,7 +295,7 @@ end
     Matrix multiplication for Estimate includes
     error propagation.
 """
-*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.C*transpose(F))
+*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.P*transpose(F))
 
 """    
     Matrix addition for Estimate includes
