@@ -185,7 +185,7 @@ end
         Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M))
         Enm = sparse(1:M,1:5:n,fill(1.0,M))
         E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n))
-        x₀ = UnitfulMatrix(zeros(n)cm)
+        x₀ = zeros(n)cm
     else
         τ = range(0.0,5.0,step=0.1)
         ρ = exp.(-τ.^2/(1)^2)
@@ -219,7 +219,7 @@ end
         E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N))
         E = (one=E1,two=E2)
         Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1))
-        x = UnitfulMatrix(randn(N)m) 
+        x = randn(N)m
     else
         E1 = randn(M,N)
         E2 = randn(M,N)
