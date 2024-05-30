@@ -118,18 +118,25 @@ function getproperty(x::Estimate, d::Symbol)
     if d === :σ
         if x.P isa DimArray # requires N = 2 where `diag` is defined
             return DimArray(.√diag(x.P),first(dims(x.P)))
+        elseif x.P isa UnitfulDimMatrix # requires N = 2 where `diag` is defined
+        # assumes, does not check, that unitdims are consistent with diag of P 
+            return UnitfulDimMatrix(ustrip.(.√diag(x.P)),unitdims(x.v),dims=first(dims(x.P)))
         else
             return .√diag(x.P)
         end
     elseif d === :x
         # x.v can be a UnitfulVector, so wrap with Matrix
-        if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
-            v = Matrix(x.v)
+        # if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
+        #     v = Matrix(x.v)
+        # else
+        #     v = x.v
+        # end
+        if x.v isa UnitfulDimMatrix # to accomodate previous block, perhaps need to expand to AbstractUnitfulType
+            tmp = measurement.(parent(x.v),parent(x.σ))
+            return UnitfulDimMatrix(tmp, unitdims(x.v), dims= dims(x.v))
         else
-            v = x.v
+            return measurement.(x.v,x.σ)
         end
-        return measurement.(v,x.σ)
-        #return x.v .± x.σ
     else
         return getfield(x, d)
     end
@@ -171,15 +178,15 @@ function solve_textbook
 """
 function solve_textbook(op::OverdeterminedProblem)
     CE = op.Cnn⁻¹*op.E
-    ECE = transpose(op.E)*CE
     if ismissing(op.Cxx⁻¹)
-        return Estimate( ECE \ (transpose(CE)*op.y), inv(ECE))
+        iECE = inv(transpose(op.E)*CE)
+        return Estimate( iECE * (transpose(CE)*op.y), iECE)
     else
         # prior information available
-        ECE += op.Cxx⁻¹
+        iECE = inv(transpose(op.E)*CE + op.Cxx⁻¹)
         rhs = transpose(CE)*op.y
         (~ismissing(op.x₀)) && (rhs += op.Cxx⁻¹*op.x₀)
-        return Estimate( ECE \ rhs, inv(ECE))
+        return Estimate( iECE * rhs, iECE)
     end
 end
 

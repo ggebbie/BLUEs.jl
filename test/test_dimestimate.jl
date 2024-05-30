@@ -34,7 +34,7 @@
         y = E*x # E::UnitfulDimMatrix or DimArray
 
         # do slices work?
-        E[At(:loc1),At(:NATL)]
+        E[At(:loc1),At(:NATL)] # doesn't return units
         E[:,At(:ANT)]
 
         # invert for x.  
@@ -61,7 +61,7 @@
             # 3) Circulation with lag
             cases = ((false,false,false),(true,false,false),(true,true,true))
 
-            #(statevars,timeseries,lag) = cases[3] # for interactive use
+            #(statevars,timeseries,lag) = cases[1] # for interactive use
             for (statevars,timeseries,lag) in cases
                 println("statevars,timeseries,lag = ",statevars,timeseries,lag)
 
