@@ -20,9 +20,14 @@
         # 3) No circulation lag
         σₙ = 1.0
         E,x = random_source_water_matrix_vector_pair(m)
-        if !use_units
+        if use_units
+            Cnndims = (first(dims(E)),first(dims(E)))
+            Cnn⁻¹ = Diagonal(fill(σₙ^-1,m),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
+        else
             E = DimArray(parent(E),dims(E))
             x = DimArray(parent(x),dims(x))
+            Cnndims = (first(dims(E)),first(dims(E)))
+            Cnn⁻¹ = DimArray(Diagonal(fill(σₙ^-1,m)),Cnndims)
         end
         
         # Run model to predict interior location temperature
@@ -35,18 +40,13 @@
         # invert for x.  
         x̃ = E\y # extend backslash (matrix left divide) for DimMatrix
 
-        if use_units
-            Cnndims = (first(dims(E)),first(dims(E)))
-            Cnn⁻¹ = Diagonal(fill(σₙ^-1,m),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
-        else
-            Cnndims = (first(dims(E)),first(dims(E)))
-            Cnn⁻¹ = DimArray(Diagonal(fill(σₙ^-1,m)),Cnndims)
-        end
-
         problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-        x̃ = solve(problem,alg=:hessian)
-        x̃ = solve(problem,alg=:textbook)
 
+        x̃ = solve(problem,alg=:hessian)
+        @test cost(x̃,problem) < 1e-5 # no noise in ob
+        @test isapprox(x̃.v,x,atol=1.0e-5)
+
+        x̃ = solve(problem,alg=:textbook)
         @test cost(x̃,problem) < 1e-5 # no noise in ob
         @test isapprox(x̃.v,x,atol=1.0e-5)
 
