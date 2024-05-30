@@ -116,7 +116,7 @@ end
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        if x.P isa AbstractDimArray # requires N = 2 where `diag` is defined
+        if x.P isa DimArray # requires N = 2 where `diag` is defined
             return DimArray(.√diag(x.P),first(dims(x.P)))
         else
             return .√diag(x.P)

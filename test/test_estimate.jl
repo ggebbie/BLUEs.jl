@@ -163,6 +163,7 @@ end
 
     # not perfect data fit b.c. of prior info
     x̃ = solve(oproblem,alg=:hessian)
+    @test cost(x̃,oproblem) < 5M
     x̃ = solve(oproblem,alg=:textbook)
     @test cost(x̃,oproblem) < 5M
 end
