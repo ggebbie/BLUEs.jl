@@ -1,7 +1,7 @@
 name = "BLUEs"
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
-version = "0.1.11-alpha"
+version = "0.2.0"
 
 [deps]
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
@@ -15,6 +15,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [compat]
+DimensionalData = "0.24, 0.25, 0.27"
 Measurements = "2"
 Statistics = "1"
 ToeplitzMatrices = "0.7, 0.8"
