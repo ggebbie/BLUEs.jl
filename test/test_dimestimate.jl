@@ -7,10 +7,10 @@
     @dim StateVariable "state variable"
     yr = u"yr"
     surfaceregions = [:NATL,:ANT,:SUBANT]
-    n = length(surfaceregions)
+    N = length(surfaceregions)
     years = (1990:2000)yr
     statevariables = [:θ, :δ¹⁸O] 
-    m = 5 # Interior Locations with obs
+    M = 5 # Interior Locations with obs
 
     @testset "E matrix = UnitfulDimMatrix (many surface regions, one state variable, multiple obs locations but no obs timeseries, no circulation lag)" begin
 
@@ -19,15 +19,15 @@
         # 2) Obs at one end time
         # 3) No circulation lag
         σₙ = 1.0
-        E,x = random_source_water_matrix_vector_pair(m)
+        E,x = random_source_water_matrix_vector_pair(M)
         if use_units
             Cnndims = (first(dims(E)),first(dims(E)))
-            Cnn⁻¹ = Diagonal(fill(σₙ^-1,m),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
+            Cnn⁻¹ = Diagonal(fill(σₙ^-1,M),unitrange(E).^-1,unitrange(E),Cnndims,exact=true)
         else
             E = DimArray(parent(E),dims(E))
             x = DimArray(parent(x),dims(x))
             Cnndims = (first(dims(E)),first(dims(E)))
-            Cnn⁻¹ = DimArray(Diagonal(fill(σₙ^-1,m)),Cnndims)
+            Cnn⁻¹ = DimArray(Diagonal(fill(σₙ^-1,M)),Cnndims)
         end
         
         # Run model to predict interior location temperature
@@ -63,29 +63,40 @@
 
             #(statevars,timeseries,lag) = cases[1] # for interactive use
             for (statevars,timeseries,lag) in cases
-                println("statevars,timeseries,lag = ",statevars,timeseries,lag)
+                println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
+                #define constants
                 lag ? nτ = 5 : nτ = 1
                 lags = (0:(nτ-1))yr
+                σₙ = 0.01
+                σₓ = 100.0
 
                 # take all years or just the end year
                 timeseries ? yrs = years : yrs = [years[end]]
 
                 M = source_water_matrix_with_lag(surfaceregions,lags)
-
+                
                 # Step 1: get synthetic solution
                 if !statevars
 
                     x = source_water_solution(surfaceregions,yrs)
 
-                    # DimArray is good enough. This is an array, not necessarily a matrix.
-                    x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
-
+                    if use_units
+                        # DimArray is good enough. This is an array, not necessarily a matrix.
+                        x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
+                    else
+                        x = DimArray(ustrip.(parent(x)), dims(x))
+                        x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
+                    end
+                    
                 elseif statevars
 
                     x = source_water_solution(surfaceregions,years, statevariables)
                     coeffs = UnitfulMatrix(rand(2,1), [NoUnits, K], [K/permil])
                     x₀ = copy(x).*0
+                    if use_units
+                    else
+                    end
 
                 else
                     error("no case")
@@ -105,7 +116,7 @@
                     global predict(x) = convolve(x,M)
                 end
 
-                # probe to get E matrix. Use function convolve
+                # probe to get E matrix. Use a convolution.
                 E = impulseresponse(predict,x₀)
 
                 # Given, M and x. Make synthetic data for observations.
@@ -115,12 +126,14 @@
             
                 # test compatibility
                 @test first(E*UnitfulMatrix(vec(x₀))) .== first(predict(x₀))
+                @test first(E*vec(x₀)) .== first(predict(x₀)) # not necessary to transfer x₀ to UnitfulMatrix
             
                 # Julia doesn't have method to make scalar into vector
                 !(y isa AbstractVector) && (y = [y])
 
                 # Does E matrix work properly?
-                ỹ = E*UnitfulMatrix(vec(x))
+                ỹ = E*UnitfulMatrix(vec(x)) # not necessary
+                ỹ = E*vec(x)
                 for jj in eachindex(y)
                     @test isapprox(vec(y)[jj],vec(ỹ)[jj])
                 end
@@ -130,12 +143,16 @@
                 end
 
                 # now in a position to use BLUEs to solve
-                σₙ = 0.01
-                σₓ = 100.0
-
-                Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1)
-                Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
-                problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
+                if use_units
+                    Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1)
+                    Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
+                else
+                    Cnn = Diagonal(fill(σₙ^2,length(y)))
+                    Cxx = Diagonal(fill(σₓ^2,length(x₀)))
+                end
+                
+                #problem = UnderdeterminedProblem(UnitfulMatrix(y),E,Cnn,Cxx,x₀)
+                problem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
 
                 # when x₀ is a DimArray, then x̃ is a DimEstimate
                 x̃ = solve(problem) # ::DimEstimate

@@ -71,8 +71,8 @@ struct UnderdeterminedProblem
     y :: AbstractVector
     E :: AbstractMatrix
     Cnn :: AbstractMatrix
-    Cxx :: Union{AbstractMatrix}
-    x₀ :: Union{AbstractVector,AbstractDimArray,Missing}
+    Cxx :: Union{AbstractMatrix, Missing}
+    x₀ :: Union{AbstractVector, AbstractDimArray, Missing}
 end
 
 #include("dim_estimate.jl")
