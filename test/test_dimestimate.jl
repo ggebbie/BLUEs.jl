@@ -19,6 +19,8 @@
         # 2) Obs at one end time
         # 3) No circulation lag
         σₙ = 1.0
+
+        # update UnitfulLinearAlgebra such that vector x needs not be UnitfulDimMatrix
         E,x = random_source_water_matrix_vector_pair(M)
         if use_units
             Cnndims = (first(dims(E)),first(dims(E)))

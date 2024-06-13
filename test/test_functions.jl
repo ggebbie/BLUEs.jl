@@ -40,6 +40,7 @@ function random_source_water_matrix_vector_pair(M)
     E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
 
     x = UnitfulDimMatrix(randn(N),fill(K,N),dims=(SurfaceRegion(surfaceregions)))
+#    x = DimArray(randn(N).*fill(K,N),(SurfaceRegion(surfaceregions)))
     return E,x
 end
 
