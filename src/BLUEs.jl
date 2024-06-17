@@ -77,6 +77,7 @@ end
 
 #include("dim_estimate.jl")
 include("base.jl")
+include("blockdim.jl")
 
 """
     function UnderdeterminedProblem
