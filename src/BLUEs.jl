@@ -25,7 +25,7 @@ a structure with some vector of values x and associated uncertainty matrix P
 -   `v :: AbstractArray{T, Nv}`
 -   `P :: AbstractArray{T, NP}`
 """
-struct Estimate{Tv <: Number, TP <: Number, Nv, NP} 
+struct Estimate{Tv <: Number, TP, Nv, NP} 
     v :: AbstractArray{Tv, Nv}
     P :: AbstractArray{TP, NP}
 end
@@ -105,6 +105,9 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Flo
         show(io, mime, x[:,:,At(s)])
     end
 end
+
+standard_error(P::AbstractArray) = .√diag(P)
+standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(x.P),first(dims(x.P)))
 
 """
     function getproperty(x::Estimate, d::Symbol)
@@ -389,7 +392,7 @@ end
 """
     multiplication for `NamedTuple`s
 
-    #Matrix multiply, Mx
+    Matrix multiply, M*x
 """
 function *(A::NamedTuple, b::AbstractVector) 
     # Update to use parametric type to set type of Vector
@@ -562,7 +565,6 @@ function expectedunits(y,x)
     end
     return Eunits
 end
-
 
 """
     function predictobs(funk,x...)

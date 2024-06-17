@@ -75,3 +75,46 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
         error("M has wrong number of dims")
     end
 end
+
+"""
+function observe(P::AbstractDimArray)
+
+functional form of E*P
+where P is a diagonal uncertainty matrix.
+P only stores the diagonals as could be
+identified from its type.
+"""
+function observematrix(P::AbstractDimArray,M)
+
+    #Pfull = zeros(dims(P))
+    #Pyx = similar(observe(first(P)))
+    out = zeros(dims(P))
+    typeout = typeof(out)
+    #in = observe(out)
+    in = convolve(out,M)
+    typein = typeof(in)
+    Pyx = Array{typein}(undef,size(P))
+    
+    #domaindims = dims(P)
+    
+    for i in eachindex(P)
+#        Pyx[i] = observe(P[i])
+        Pyx[i] = convolve(P[i],M)
+    end
+    return DimArray(Pyx,dims(P))
+end
+
+function diagonalmatrix(Pdims::Tuple)
+
+    tmp = zeros(Pdims)
+    typetmp = typeof(tmp)
+
+    P = Array{typetmp}(undef,size(tmp))
+
+    for i in eachindex(P)
+        P[i] = zeros(Pdims)
+        P[i][i] += 1.0
+    end
+    return DimArray(P,Pdims)
+end
+
