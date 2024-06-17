@@ -25,7 +25,6 @@
         timeseries ? yrs = years : yrs = [years[end]]
 
         M = source_water_matrix_with_lag(surfaceregions,lags)
-                
         x = source_water_solution(surfaceregions,yrs)
 
         if use_units
@@ -42,8 +41,12 @@
 
             iPy = inv.(Py)
             iPx0 = inv.(Px0)
-            
-            𝐱 = BLUEs.BlockDimArray(x,dims(x))
+
+            observe(x) = convolve(x,M)
+
+            observe( x₀)
+            observe( x)
+#            𝐱 = BLUEs.BlockDimArray(x,dims(x))
         end
                     
                 elseif statevars
