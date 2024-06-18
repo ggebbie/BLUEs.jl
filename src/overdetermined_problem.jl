@@ -137,3 +137,23 @@ function hessian(op::OverdeterminedProblem)
     end
 end
 
+"""
+    function pinv
+
+    Left pseudo-inverse (i.e., least-squares estimator)
+"""
+function LinearAlgebra.pinv(op::OverdeterminedProblem)
+    CE = op.Cnn⁻¹*op.E
+    ECE = transpose(op.E)*CE
+    return ECE \ transpose(CE)
+end
+
+"""
+    Compute cost function
+"""
+function cost(x̃::Estimate,op::OverdeterminedProblem)
+    Jdata = datacost(x̃,op)
+    (~ismissing(op.x₀) && ~ismissing(op.Cxx⁻¹)) ? Jcontrol = controlcost(x̃,op) : Jcontrol = nothing
+    isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
+    return J
+end

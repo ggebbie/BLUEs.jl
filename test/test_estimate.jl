@@ -16,6 +16,8 @@
     @test Measurements.value.(E*a) ≈ (E*x).v
     @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
 
+    # combine two estimates
+    xplus = combine(x,x)
 end
 
 @testset "mixed signals: dimensionless matrix" begin

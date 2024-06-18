@@ -24,3 +24,31 @@ end
 """
 UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
 
+"""
+    function solve
+
+        Solve underdetermined problem
+"""
+function solve(up::UnderdeterminedProblem)
+    y = up.y
+    if ismissing(up.x₀)
+        n = y
+    else
+        x₀ = up.x₀
+        n = y - up.E*x₀
+    end
+    Cxy = up.Cxx*transpose(up.E)
+    Cyy = up.E*Cxy + up.Cnn
+    v = Cxy*(Cyy \ n)
+    (~ismissing(up.x₀)) && (v += x₀)
+    P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
+    return Estimate(v,P)
+end
+
+function cost(x̃::Estimate,up::UnderdeterminedProblem)
+#function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
+   Jdata = datacost(x̃,up)
+   Jcontrol = controlcost(x̃,up) 
+   J = Jdata + Jcontrol
+   return J
+end

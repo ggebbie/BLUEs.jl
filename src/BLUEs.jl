@@ -37,6 +37,7 @@ include("dimensional_data.jl")
 include("blockdim.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
+include("named_tuple.jl")
 include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
@@ -65,15 +66,9 @@ function getproperty(x::Estimate, d::Symbol)
         # assumes, does not check, that unitdims are consistent with diag of P 
             return UnitfulDimMatrix(ustrip.(.√diag(x.P)),unitdims(x.v),dims=first(dims(x.P)))
         else
-            return .√diag(x.P)
+            return standard_error(x.P) # .√diag(x.P)
         end
     elseif d === :x
-        # x.v can be a UnitfulVector, so wrap with Matrix
-        # if x.v isa UnitfulLinearAlgebra.AbstractUnitfulType
-        #     v = Matrix(x.v)
-        # else
-        #     v = x.v
-        # end
         if x.v isa UnitfulDimMatrix # to accomodate previous block, perhaps need to expand to AbstractUnitfulType
             tmp = measurement.(parent(x.v),parent(x.σ))
             return UnitfulDimMatrix(tmp, unitdims(x.v), dims= dims(x.v))
@@ -87,7 +82,6 @@ end
 
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 
-
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
 symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
@@ -97,37 +91,6 @@ symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
 symmetric_innerproduct(E::NamedTuple) = sum(transpose(E)*E)
 symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(Cnn⁻¹*E))
                                                     
-"""
-    function pinv
-
-    Left pseudo-inverse (i.e., least-squares estimator)
-"""
-function LinearAlgebra.pinv(op::OverdeterminedProblem)
-    CE = op.Cnn⁻¹*op.E
-    ECE = transpose(op.E)*CE
-    return ECE \ transpose(CE)
-end
-
-"""
-    function solve
-
-        Solve underdetermined problem
-"""
-function solve(up::UnderdeterminedProblem)
-    y = up.y
-    if ismissing(up.x₀)
-        n = y
-    else
-        x₀ = up.x₀
-        n = y - up.E*x₀
-    end
-    Cxy = up.Cxx*transpose(up.E)
-    Cyy = up.E*Cxy + up.Cnn
-    v = Cxy*(Cyy \ n)
-    (~ismissing(up.x₀)) && (v += x₀)
-    P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
-    return Estimate(v,P)
-end
 
 """    
     Matrix multiplication for Estimate includes
@@ -141,24 +104,6 @@ end
     Recursive Least Squares, "Dynamical Insights from Data" class notes
 """
 +(x::Estimate,y::Estimate) = error("not implemented yet")
-
-"""
-    Compute cost function
-"""
-function cost(x̃::Estimate,op::OverdeterminedProblem)
-    Jdata = datacost(x̃,op)
-    (~ismissing(op.x₀) && ~ismissing(op.Cxx⁻¹)) ? Jcontrol = controlcost(x̃,op) : Jcontrol = nothing
-    isnothing(Jcontrol) ? J = Jdata : J = Jdata + Jcontrol
-    return J
-end
-
-function cost(x̃::Estimate,up::UnderdeterminedProblem)
-#function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
-   Jdata = datacost(x̃,up)
-   Jcontrol = controlcost(x̃,up) 
-   J = Jdata + Jcontrol
-   return J
-end
 
 """
     Cost function contribution from observations
@@ -216,90 +161,6 @@ function controlcost( x̃::Estimate, p::Union{OverdeterminedProblem,Underdetermi
     return symmetric_innerproduct(Δx,Cxx⁻¹)
 end
 
-"""
-    multiplication for `NamedTuple`s
-
-    Matrix multiply, M*x
-"""
-function *(A::NamedTuple, b::AbstractVector) 
-    # Update to use parametric type to set type of Vector
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = V*b 
-    end
-    return NamedTuple{keys(A)}(c)
-end
-function *(A::NamedTuple, b::NamedTuple)
-    ~(keys(A) == keys(b)) && error("named tuples don't have consistent fields")
-    
-    # Update to use parametric type to set type of Vector
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = V*b[i] # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
-function *(b::T,A::NamedTuple) where T<:Number
-    
-    # Update to use parametric type to set type of Vector
-    # Overwriting A would be more efficient
-    c = Vector(undef, length(A))
-    #c = similar(A)
-    for (i, V) in enumerate(A)
-        c[i] = V*b # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
-function -(A::NamedTuple) 
-    
-    # Update to use parametric type to set type of Vector
-    # Overwriting A would be more efficient
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = -V # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
-function -(A::NamedTuple,B::NamedTuple) 
-    
-    # Update to use parametric type to set type of Vector
-    # Overwriting A would be more efficient
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = A[i]-B[i] # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
-
-function +(A::NamedTuple,B::NamedTuple) 
-    
-    # Update to use parametric type to set type of Vector
-    # Overwriting A would be more efficient
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = A[i]+B[i] # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
-
-function sum(A::NamedTuple) 
-    # Update to use parametric type to initialize output
-    Asum = 0 * A[1] # a kludge
-    for (i, V) in enumerate(A)
-        Asum += V 
-    end
-    return Asum
-end
-
-function LinearAlgebra.transpose(A::NamedTuple) 
-    
-    # Update to use parametric type to set type of Vector
-    c = Vector(undef, length(A))
-    for (i, V) in enumerate(A)
-        c[i] = transpose(V) # b index safe?
-    end
-    return NamedTuple{keys(A)}(c)
-end
 
 """
 function impulseresponse(x₀,M)
