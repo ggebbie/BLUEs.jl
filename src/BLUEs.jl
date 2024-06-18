@@ -14,7 +14,7 @@ export expectedunits, impulseresponse, convolve
 export predictobs, addcontrol, addcontrol!, flipped_mult
 #export DimEstimate
 
-import Base: show, getproperty, propertynames, *, +, -, sum
+import Base: show, getproperty, propertynames, *, +, -, \, sum
 import LinearAlgebra: pinv, transpose
 
 """
@@ -131,18 +131,6 @@ symmetric_innerproduct(E::NamedTuple) = sum(transpose(E)*E)
 symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(Cnn⁻¹*E))
                                                     
 
-"""    
-    Matrix multiplication for Estimate includes
-    error propagation.
-"""
-*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.P*transpose(F))
-
-"""    
-    Matrix addition for Estimate includes
-    error propagation. Follow pp. 95, Sec. 2.5.5,
-    Recursive Least Squares, "Dynamical Insights from Data" class notes
-"""
-+(x::Estimate,y::Estimate) = error("not implemented yet")
 
 """
     Cost function contribution from observations

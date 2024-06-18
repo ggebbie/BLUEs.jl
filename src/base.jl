@@ -1,11 +1,23 @@
+"""    
+    Matrix multiplication for Estimate includes
+    error propagation.
 """
-     function left divide
+*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.P*transpose(F))
 
-     Left divide of Multipliable Matrix.
-     Reverse mapping from unitdomain to range.
-     Is `exact` if input is exact.
+"""    
+    Matrix left divide for Estimate includes
+    error propagation.
 """
-function Base.:\(A::AbstractDimMatrix,b::AbstractDimVector)
-    DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-    return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) 
+function \(F::AbstractMatrix,x::Estimate)
+    v = F\x.v
+    b = F\x.P
+    P = transpose(F\transpose(b)) 
+    return Estimate(v,P)
 end
+
+"""    
+    Matrix addition for Estimate includes
+    error propagation. Follow pp. 95, Sec. 2.5.5,
+    Recursive Least Squares, "Dynamical Insights from Data" class notes
+"""
++(x::Estimate,y::Estimate) = error("not implemented yet")

@@ -25,12 +25,12 @@
     @test isapprox( xplus.v, x.v )
 
         # combine two estimates
-    xplus = combine(x,x,alg=:overdetermined)
+    @time xplus = combine(x,x,alg=:overdetermined)
+    @time xplus = combine(x,x,alg=:underdetermined)
     # error should decrease by 70%
     @test sum( xplus.σ./x.σ .< 0.8) == M
     # central estimate should not change
     @test isapprox( xplus.v, x.v )
-    
 end
 
 @testset "mixed signals: dimensionless matrix" begin
@@ -46,17 +46,29 @@ end
         else
             σₓ = rand()
             E = randn(M,N)
-            Cnn⁻¹ = Diagonal(fill(σₓ^-1,M))
-            x = randn(N)
+            Cxx⁻¹ = Diagonal(fill(σₓ^-1,N))
+            v = randn(N)
+            x = Estimate(v,inv(Cxx⁻¹))
         end
         
         y = E*x
-        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
-        x̃ = solve(problem,alg=:hessian)
-        x̃ = solve(problem,alg=:textbook)
-        @test x ≈ x̃.v
-        @test cost(x̃,problem) < 1e-5 # no noise in obs
-        @test x ≈ pinv(problem) * y # inefficient way to solve problem
+
+        if M == N
+            xtilde1 = inv(E)*y
+            @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8)) == M 
+            @test sum(isapprox.(x.P, xtilde1.P, atol=1e-8)) == M*N
+        end
+        
+        xtilde2 = E\y
+        @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8)) == M 
+        @test sum(isapprox.(x.P, xtilde2.P, atol=1e-8)) == M*N 
+
+        #problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        # x̃ = solve(problem,alg=:hessian)
+        # x̃ = solve(problem,alg=:textbook)
+        # @test x ≈ x̃.v
+        # @test cost(x̃,problem) < 1e-5 # no noise in obs
+        # @test x ≈ pinv(problem) * y # inefficient way to solve problem
     end
 end
 
