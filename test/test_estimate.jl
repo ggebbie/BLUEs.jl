@@ -41,16 +41,15 @@ end
             σₓ = rand()
             # exact = false to work
             E = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
-            Cnn⁻¹ = Diagonal(fill(σₓ^-1,M),unitrange(E).^-1,unitrange(E))
-            x = UnitfulMatrix(randn(N)m)
+            Cxx⁻¹ = Diagonal(fill(σₓ^-1,N),unitdomain(E).^-1,unitdomain(E))
+            v = UnitfulMatrix(randn(N)m)
         else
             σₓ = rand()
             E = randn(M,N)
             Cxx⁻¹ = Diagonal(fill(σₓ^-1,N))
             v = randn(N)
-            x = Estimate(v,inv(Cxx⁻¹))
         end
-        
+        x = Estimate(v,inv(Cxx⁻¹));
         y = E*x
 
         if M == N

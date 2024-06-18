@@ -12,7 +12,7 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Flo
     end
 end
 
-standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(x.P),first(dims(x.P)))
+standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(P),first(dims(P)))
 
 """
      function left divide

@@ -129,8 +129,6 @@ symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
 """
 symmetric_innerproduct(E::NamedTuple) = sum(transpose(E)*E)
 symmetric_innerproduct(E::NamedTuple,Cnn⁻¹::NamedTuple) = sum(transpose(E)*(Cnn⁻¹*E))
-                                                    
-
 
 """
     Cost function contribution from observations
