@@ -7,6 +7,7 @@ using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
+export combine, combine!
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
@@ -81,6 +82,44 @@ function getproperty(x::Estimate, d::Symbol)
 end
 
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
+
+function combine(x0::Estimate, x1::Estimate; alg=:underdetermined)
+
+    if alg == :underdetermined
+
+        n = x1.v - x0.v # n = x1 - x0, difference
+        v = x0.v + x0.P * ( (x1.P + x0.P) \ n )
+        P = x0.P - x0.P * ( (x1.P + x0.P) \ x0.P )
+        
+    elseif alg == :overdetermined
+
+        iP0 = inv(x0.P)
+        iP1 = inv(x1.P)
+        sumP = iP0 + iP1
+        P = inv(sumP)
+        v = P * (iP0 * x0.v + iP1 * x1.v) 
+    else
+        error("combine method not implemented")
+    end
+    return Estimate(v, P)
+end
+
+# error: struct is immutable
+# function combine!(x0::Estimate, x1::Estimate; alg=:underdetermined)
+
+#     if alg == :underdetermined
+
+#         Psum = x1.P + x0.P
+#         n = x1.v - x0.v # n = x1 - x0, difference
+#         x0.v +=  x0.P * ( Psum \ n ) # overwrite
+#         x0.P -= x0.P * ( Psum \ x0.P ) # overwrite
+        
+#     elseif alg == :overdetermined
+#         error("combine method not implemented")
+#     else
+#         error("combine method not implemented")
+#     end
+# end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)

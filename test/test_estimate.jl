@@ -1,13 +1,14 @@
 @testset "error propagation" begin
     using Measurements
 
+    M = 5
     if use_units
-        a = randn(5)u"K" .± rand(5)u"K"
+        a = randn(M)u"K" .± rand(M)u"K"
     else
-        a = randn(5) .± rand(5)
+        a = randn(M) .± rand(M)
     end
-    
-    E = randn(5,5)
+
+    E = randn(M,M)
 
     aerr = Measurements.uncertainty.(a);
     x = Estimate(Measurements.value.(a),
@@ -17,7 +18,19 @@
     @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
 
     # combine two estimates
-    xplus = combine(x,x)
+    xplus = combine(x,x,alg=:underdetermined)
+    # error should decrease by 70%
+    @test sum( xplus.σ./x.σ .< 0.8) == M
+    # central estimate should not change
+    @test isapprox( xplus.v, x.v )
+
+        # combine two estimates
+    xplus = combine(x,x,alg=:overdetermined)
+    # error should decrease by 70%
+    @test sum( xplus.σ./x.σ .< 0.8) == M
+    # central estimate should not change
+    @test isapprox( xplus.v, x.v )
+    
 end
 
 @testset "mixed signals: dimensionless matrix" begin
