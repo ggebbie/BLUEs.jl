@@ -22,7 +22,7 @@
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-        (statevars,timeseries,lag) = cases[1] # for interactive use
+#        (statevars,timeseries,lag) = cases[1] # for interactive use
         for (statevars,timeseries,lag) in cases
             println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 

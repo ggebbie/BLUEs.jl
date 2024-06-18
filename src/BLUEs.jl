@@ -30,62 +30,14 @@ struct Estimate{Tv <: Number, TP, Nv, NP}
     P :: AbstractArray{TP, NP}
 end
 
-"""
-    struct OverdeterminedProblem
-
-    a structure (NamedTuple version) with fields
-
-    - `y::Union{<: AbstractVector,NamedTuple}`: "observations", namedtuples of vectors
-    - `E :: Union{<: AbstractMatrix, NamedTuple}`: model matrices 
-    - `Cnn⁻¹ :: Union{<: AbstractMatrix, NamedTuple}`: namedtuple of inverse noise covariance matrix
-    - `Cxx⁻¹ :: Union{<: AbstractMatrix, Missing}`: tapering matrices, NOT namedtuples 
-    - `x₀ :: Union{<: AbstractVector, Missing}`: first guess vector
-"""
-struct OverdeterminedProblem
-    y :: Union{<: AbstractVector,NamedTuple}
-    E :: Union{<: AbstractMatrix, NamedTuple}
-    Cnn⁻¹ :: Union{<: AbstractMatrix, NamedTuple}
-    Cxx⁻¹ :: Union{<: AbstractMatrix, Missing}
-    x₀ :: Union{<: AbstractVector, Missing}
-end
-
-"""
-    function OverdeterminedProblem
-
-    generates OverdeterminedProblem structure with x₀ = missing, Cxx = missing 
-"""
-OverdeterminedProblem(y::Union{<: AbstractVector,NamedTuple},E::Union{<: AbstractMatrix,NamedTuple},Cnn⁻¹::Union{<:AbstractMatrix,NamedTuple}) = OverdeterminedProblem(y,E,Cnn⁻¹,missing,missing)
-
-"""
-    struct UnderdeterminedProblem
-
-    a structure with fields
-
-    - `y::AbstractVector`: vector of "observations"
-    - `E::AbstractMatrix`: model matrix 
-    - `Cnn::AbstractMatrix`: noise covariance matrix 
-    - `Cxx::Union{AbstractMatrix}`: tapering matrix 
-    - `x₀::Union{AbstractVector, Missing}`: first guess vector
-"""
-struct UnderdeterminedProblem
-    y :: AbstractVector
-    E :: AbstractMatrix
-    Cnn :: AbstractMatrix
-    Cxx :: Union{AbstractMatrix, Missing}
-    x₀ :: Union{AbstractVector, AbstractDimArray, Missing}
-end
-
 #include("dim_estimate.jl")
 include("base.jl")
 include("unitful.jl")
+include("dimensional_data.jl")
 include("blockdim.jl")
-
-"""
-    function UnderdeterminedProblem
-
-    generates UnderdeterminedProblem structure with x₀ = missing, still requires Cxx 
-"""
-UnderdeterminedProblem(y::AbstractVector,E::AbstractMatrix,Cnn::AbstractMatrix,Cxx::AbstractMatrix) = OverdeterminedProblem(y,E,Cnn,Cxx,missing)
+include("overdetermined_problem.jl")
+include("underdetermined_problem.jl")
+include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     #function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
@@ -94,21 +46,7 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     show(io, mime, x.x)
 end
 
-function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Float64}, 3})
-    summary(io, x); println(io)
-    statevars = x.dims[3]
-    for (i, s) in enumerate(statevars)
-        if i != 1
-            println()
-        end
-        
-        println(io, "State Variable " * string(i) * ": " * string(s))
-        show(io, mime, x[:,:,At(s)])
-    end
-end
-
 standard_error(P::AbstractArray) = .√diag(P)
-standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(x.P),first(dims(x.P)))
 
 """
     function getproperty(x::Estimate, d::Symbol)
@@ -149,118 +87,6 @@ end
 
 Base.propertynames(x::Estimate) = (:x, :σ, fieldnames(typeof(x))...)
 
-"""
-    function solve
-
-        Solve overdetermined problem
-
-        optional alg= :textbook or :hessian
-"""
-function solve(op::OverdeterminedProblem; alg=:textbook)
-    if alg == :textbook
-        return solve_textbook(op)
-    else
-        alg == :hessian
-        return solve_hessian(op)
-    end
-end
-
-"""
-function solve_textbook
-
-    Solves overdetermined problem
-    y = Ex with associated uncertainty Cnn⁻¹ that is used for weighting
-           optionally, can have prior information as well 
-
-    x̃ = (EᵀCnn⁻¹E)⁻¹[(Cnn⁻¹E)ᵀy]
-    Cx̃x̃ = (EᵀCnn⁻¹E)⁻¹
-
-    If prior information (Cxx⁻¹, x₀) is available
-    x̃ = (EᵀCnn⁻¹E + Cxx⁻¹)⁻¹[(Cnn⁻¹E)ᵀy + Cxx⁻¹x₀]
-    Cx̃x̃ = (EᵀCnn⁻¹E)⁻¹
-
-    See equations 1.208/1.209 in Dynamical Insights from Data
-"""
-function solve_textbook(op::OverdeterminedProblem)
-    CE = op.Cnn⁻¹*op.E
-    if ismissing(op.Cxx⁻¹)
-        iECE = inv(transpose(op.E)*CE)
-        return Estimate( iECE * (transpose(CE)*op.y), iECE)
-    else
-        # prior information available
-        iECE = inv(transpose(op.E)*CE + op.Cxx⁻¹)
-        rhs = transpose(CE)*op.y
-        (~ismissing(op.x₀)) && (rhs += op.Cxx⁻¹*op.x₀)
-        return Estimate( iECE * rhs, iECE)
-    end
-end
-
-"""
-function solve_hessian
-
-    Solving y = Ex
-
-H = Eᵀ(Cnn⁻¹E) + Cxx⁻¹
-∂J/∂x =  -E^T ∂J/∂n
-∂J/∂n = 2n
-n = y - Ex₀
-x̃ = -1/2 H⁻¹ ∂J/∂x
-"""
-function solve_hessian(op::OverdeterminedProblem)
-    #the two following functions will iterate over NamedTuples
-    ∂J∂x = gradient(op) #-(Eᵀ∂J∂n) 
-    H⁻¹ = inv(hessian(op)) #hessian = Eᵀ(Cnn⁻¹E) or Eᵀ(Cnn⁻¹E) + Cxx⁻¹
-    x = -(1//2)*H⁻¹*∂J∂x
-    #H = hessian(op) #hessian = Eᵀ(Cnn⁻¹E) or Eᵀ(Cnn⁻¹E) + Cxx⁻¹
-    #x = -(1//2)*(H\∂J∂x)
-    (~ismissing(op.x₀)) && (x += op.x₀)
-    return Estimate( x, H⁻¹)
-end
-
-"""
-function misfitgradient
-    
-    returns 2(Cnn⁻¹y) or 2[Cnn⁻¹(y - Ex₀)] 
-"""
-function misfitgradient(op::OverdeterminedProblem)
-    if ismissing(op.x₀)
-        n = op.y 
-    else
-        n = op.y - op.E*op.x₀
-    end
-    return 2 *(op.Cnn⁻¹*n)
-end
-
-"""
-function gradient
-
-    compute ∂J∂x = -(Eᵀ∂J∂n) = -2(Eᵀ(Cnn⁻¹y)) or -2Eᵀ[Cnn⁻¹(y - Ex₀)] 
-    
-"""
-function gradient(op::OverdeterminedProblem)
-    ∂J∂n = misfitgradient(op) #2(Cnn⁻¹y) or 2[Cnn⁻¹(y - Ex₀)] 
-    if typeof(op.E) <: NamedTuple
-        return -sum(transpose(op.E)*∂J∂n)
-    else
-        return -(transpose(op.E)*∂J∂n) # annoying
-    end
- end
-
-"""
-function hessian
-
-    compute Eᵀ(Cnn⁻¹E) or Eᵀ(Cnn⁻¹E) + Cxx⁻¹
-    depending on if prior is available 
-"""
-function hessian(op::OverdeterminedProblem)
-    if ismissing(op.Cxx⁻¹)
-        #return transpose(op.E)*(op.Cnn⁻¹*op.E)
-        return symmetric_innerproduct(op.E,op.Cnn⁻¹)
-    else
-        return symmetric_innerproduct(op.E,op.Cnn⁻¹) + op.Cxx⁻¹
-        #return transpose(op.E)*(op.Cnn⁻¹*op.E) + op.Cxx⁻¹
-    end
-end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
