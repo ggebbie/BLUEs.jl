@@ -42,25 +42,36 @@ end
             # exact = false to work
             E = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
             Cxx⁻¹ = Diagonal(fill(σₓ^-1,N),unitdomain(E).^-1,unitdomain(E))
-            v = UnitfulMatrix(randn(N)m)
+            #v = UnitfulMatrix(randn(N)m)
+            v = randn(N)m
         else
             σₓ = rand()
             E = randn(M,N)
             Cxx⁻¹ = Diagonal(fill(σₓ^-1,N))
             v = randn(N)
         end
-        x = Estimate(v,inv(Cxx⁻¹));
+        x = Estimate(v,inv(Cxx⁻¹))
         y = E*x
 
         if M == N
             xtilde1 = inv(E)*y
-            @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8)) == M 
-            @test sum(isapprox.(x.P, xtilde1.P, atol=1e-8)) == M*N
+            if use_units
+                @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8m)) == N 
+                @test within(x.P, xtilde1.P,1e-10) # from UnitfulLinearAlgebra
+            else 
+                @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8)) == N  
+                @test sum(isapprox.(x.P, xtilde1.P, atol=1e-8)) == N^2
+            end
         end
         
         xtilde2 = E\y
-        @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8)) == M 
-        @test sum(isapprox.(x.P, xtilde2.P, atol=1e-8)) == M*N 
+        if use_units
+            @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8m)) == N 
+            @test within(x.P, xtilde2.P,1e-10) # from UnitfulLinearAlgebra
+        else 
+            @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8)) == N  
+            @test sum(isapprox.(x.P, xtilde2.P, atol=1e-8)) == N^2
+        end
 
         #problem = OverdeterminedProblem(y,E,Cnn⁻¹)
         # x̃ = solve(problem,alg=:hessian)

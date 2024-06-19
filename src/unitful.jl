@@ -1,3 +1,5 @@
+standard_error(P::UnitfulMatrix) = .√diag(P)
+
 function UnitfulMatrix_from_input_output(Eu,y,x)
     if length(x) == 1 && length(y) == 1
         return UnitfulMatrix(ustrip.(Eu),[unit(y)],[unit(x)])
