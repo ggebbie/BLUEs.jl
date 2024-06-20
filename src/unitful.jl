@@ -1,4 +1,8 @@
-standard_error(P::UnitfulMatrix) = .√diag(P)
+function standard_error(P::UnitfulMatrix)
+   sigma = .√diag(P)
+   (sigma isa Vector) ? (return sigma) : (return [sigma])
+end
+
 
 function UnitfulMatrix_from_input_output(Eu,y,x)
     if length(x) == 1 && length(y) == 1
