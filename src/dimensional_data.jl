@@ -11,7 +11,16 @@ function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Flo
     end
 end
 
-standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(P),first(dims(P)))
+function standard_error(P::DimArray)
+    #sigma = similar(parent(P))
+    sigma = Array{eltype(eltype(P))}(undef,size(P))
+    for i in eachindex(P)
+        sigma[i] = √P[i][i]
+    end
+    return DimArray(sigma,dims(P))
+end
+
+#standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(P),first(dims(P)))
 
 """
      function left divide

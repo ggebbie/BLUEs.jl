@@ -53,10 +53,10 @@
                     # if dims(P) == dims(x) then assume P is Diagonal
                     Py = σₙ^2 * ones(dims(x))
                     #Px0 = σₓ^2 * ones(dims(x₀)) 
-                    Px0 = BLUEs.diagonalmatrix(dims(x₀))
+                    Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
                     
-                    iPy = inv.(Py)
-                    iPx0 = inv.(Px0)
+                    #iPy = inv.(Py)
+                    #iPx0 = inv.(Px0)
 
                     x0 = Estimate( x₀, Px0);
                 end
