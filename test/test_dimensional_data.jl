@@ -51,13 +51,9 @@
 
                     # want uncertainties to be DimArrays also
                     # if dims(P) == dims(x) then assume P is Diagonal
-                    Py = σₙ^2 * ones(dims(x))
-                    #Px0 = σₓ^2 * ones(dims(x₀)) 
+                    #Py = σₙ^2 * ones(dims(x))
+                    #Px0 = σₓ^2 * ones(dims(x₀))
                     Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
-                    
-                    #iPy = inv.(Py)
-                    #iPx0 = inv.(Px0)
-
                     x0 = Estimate( x₀, Px0);
                 end
                     
@@ -91,6 +87,7 @@
             # Given, M and x. Make synthetic data for observations.
             println("Synthetic data")
             ytrue = observe(x)
+            Py = σₙ^2 * BLUEs.diagonalmatrix(dims(ytrue))
             y = Estimate( ytrue, Py)
             
             # # probe to get E matrix. Use a convolution.
@@ -99,11 +96,6 @@
             # # test compatibility
             # @test first(E*UnitfulMatrix(vec(x₀))) .== first(observe(x₀))
             # @test first(E*vec(x₀)) .== first(observe(x₀)) # not necessary to transfer x₀ to UnitfulMatrix
-            
-            # # Julia doesn't have method to make scalar into vector
-            # !(y isa AbstractVector) && (y = [y])
-
-            # # Does E matrix work properly?
             # ỹ = E*UnitfulMatrix(vec(x)) # not necessary
             # ỹ = E*vec(x)
             # for jj in eachindex(y)
@@ -132,6 +124,8 @@
             #end
 
             Cyx = BLUEs.observematrix(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
+            Cxy = BLUEs.transposematrix(Cyx)
+            ECxy = BLUEs.observematrix(Cxy,M)
             Cyy = up.E*Cxy + up.Cnn
             v = Cxy*(Cyy \ n)
             (~ismissing(up.x₀)) && (v += x₀)
