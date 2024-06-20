@@ -8,7 +8,6 @@ using DimensionalData:AbstractDimVector
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine, combine!
-export update
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
@@ -105,10 +104,10 @@ function combine(x0::Estimate, x1::Estimate; alg=:underdetermined)
     return Estimate(v, P)
 end
 
-function combine(x0::Estimate, y::Estimate, E::AbstractMatrix; alg=:underdetermined)
+function combine(x0::Estimate, y::Estimate, E::AbstractMatrix)
 
-    if alg == :underdetermined
-
+    #if alg == :underdetermined
+    if size(E,2) ≥ size(E,1) 
         n = y.v - E * x0.v
         sumP = y.P + E * x0.P * transpose(E) 
         v = x0.v + x0.P * transpose(E) *
@@ -116,8 +115,9 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix; alg=:underdetermi
         P = x0.P - x0.P * transpose(E) *
             ( sumP \ (E * x0.P) )
         
-    elseif alg == :overdetermined
-
+    #elseif alg == :overdetermined
+    elseif size(E,1) > size(E,2) 
+    
         iPx = inv(x0.P)
         iPy = inv(y.P)
         sumP = iPx + iPy
@@ -127,39 +127,6 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix; alg=:underdetermi
         error("combine method not implemented")
     end
     return Estimate(v, P)
-end
-
-# error: struct is immutable
-# function combine!(x0::Estimate, x1::Estimate; alg=:underdetermined)
-
-#     if alg == :underdetermined
-
-#         Psum = x1.P + x0.P
-#         n = x1.v - x0.v # n = x1 - x0, difference
-#         x0.v +=  x0.P * ( Psum \ n ) # overwrite
-#         x0.P -= x0.P * ( Psum \ x0.P ) # overwrite
-        
-#     elseif alg == :overdetermined
-#         error("combine method not implemented")
-#     else
-#         error("combine method not implemented")
-#     end
-# end
-
-#    x1 = update(x0, y_estimate, E)
-"""
-function update(x0::Estimate, y::Estimate, E)
-
-start with the state vector, x0
-use a constraint from y (perhaps observations)
-that are related to x0 by: E * x0 = y
-"""
-function update(x0::Estimate, y::Estimate, E::AbstractMatrix)
-    # propagate x0 into terms that can directly be compared with y.
-    y0 = E*x0
-    y1 = combine(y0,y)
-    # invert for x
-    return E\y1 
 end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
