@@ -7,7 +7,7 @@ using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
-export combine, combine!
+export combine
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
@@ -42,8 +42,7 @@ include("named_tuple.jl")
 include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
-    #function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Union{DimEstimate,Estimate})
-    summary(io, x); println(io)
+    #summary(io, x); println(io) # too long and noisy although informative
     println(io, "Estimate and 1σ uncertainty")
     show(io, mime, x.x)
 end
@@ -61,9 +60,7 @@ standard_error(P::AbstractArray) = .√diag(P)
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        if x.P isa DimArray # requires N = 2 where `diag` is defined
-            return DimArray(.√diag(x.P),first(dims(x.P)))
-        elseif x.P isa UnitfulDimMatrix # requires N = 2 where `diag` is defined
+        if x.P isa UnitfulDimMatrix # requires N = 2 where `diag` is defined
         # assumes, does not check, that unitdims are consistent with diag of P 
             return UnitfulDimMatrix(ustrip.(.√diag(x.P)),unitdims(x.v),dims=first(dims(x.P)))
         else
