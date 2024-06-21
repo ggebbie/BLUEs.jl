@@ -164,7 +164,7 @@ end
 """
 function dimarray_to_matrix(P::DimArray)
 """
-function dimarray_to_matrix(P::DimArray)
+function dimarray_to_matrix(P::DimArray{T}) where T <: AbstractDimArray
     # number of columns/ outer dims
     N = length(P)
     # number of rows, take first inner element as example
@@ -188,15 +188,15 @@ end
 """
 function dimarray_to_vector(P::DimArray)
 """
-function dimarray_to_vector(P::DimArray)
+function dimarray_to_vector(P::DimArray{T}) where T <: Number
     # number of columns/ outer dims
-    N = length(P)
-    (N > 1) && (error("not possible to make a vector"))
+    M = length(P)
+    #(N > 1) && (error("not possible to make a vector"))
     # number of rows, take first inner element as example
-    M = length(first(P))
-    A = Vector{eltype(first(P))}(undef,M)
-    for i in eachindex(first(P))
-        A[i] = first(P)[i]
+    #M = length(first(P))
+    A = Vector{T}(undef,M)
+    for i in eachindex(P)
+        A[i] = P[i]
     end
     return A 
 end
@@ -243,12 +243,23 @@ function transposematrix(P::DimArray)
     return matrix_to_dimarray( transpose(A), ddims, rdims)
 end
 
-function ldivmatrix(A::DimArray, b::DimArray)
+function ldivmatrix(A::DimArray{T}, b::DimArray{T}) where T<: AbstractDimArray
+    Amat = dimarray_to_matrix(A) \ dimarray_to_matrix(b)
+    (Amat isa Number) && (Amat = [Amat])
+    return DimArray(reshape(Amat, size(dims(A))), dims(A))
+end
+function ldivmatrix(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
     Amat = dimarray_to_matrix(A) \ dimarray_to_vector(b)
     (Amat isa Number) && (Amat = [Amat])
-    return DimArray(Amat, dims(A))
+    return DimArray(reshape(Amat, size(dims(A))), dims(A))
 end
 
+function matmulmatrix(A::DimArray, b::DimArray{T}) where T <: Number
+    Amat = dimarray_to_matrix(A) * dimarray_to_vector(b)
+    (Amat isa Number) && (Amat = [Amat])
+    rdims = dims(first(A))
+    return DimArray( reshape(Amat, size(rdims)), rdims)
+end
 function matmulmatrix(A::DimArray, b::DimArray)
     Amat = dimarray_to_matrix(A) * dimarray_to_matrix(b)
     (Amat isa Number) && (Amat = [Amat])

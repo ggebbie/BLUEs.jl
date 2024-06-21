@@ -88,7 +88,7 @@
             y = Estimate( ytrue, Py)
 
             # test that these vectors;matrices can be used in algebraic expressions
-            yvmat = BLUEs.dimarray_to_matrix(y.v)
+            yvmat = BLUEs.dimarray_to_vector(y.v)
             yvda = BLUEs.vector_to_dimarray(yvmat, dims(y.v))
             @test y.v == yvda
 
@@ -104,6 +104,11 @@
             else
             end
 
+            # check functional form of observational operator
+            Imatrix = BLUEs.diagonalmatrix(dims(x₀))
+            Ematrix = BLUEs.observematrix(Imatrix,M) 
+            E = BLUEs.dimarray_to_matrix(Ematrix)
+
             Cyx = BLUEs.observematrix(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
             Cxy = BLUEs.transposematrix(Cyx)
             ECxy = BLUEs.observematrix(Cxy,M)
@@ -113,6 +118,8 @@
             tmp = BLUEs.ldivmatrix(Cyy, n)
             v = BLUEs.matmulmatrix(Cxy, tmp)
 
+            BLUEs.ldivmatrix(Cyy,Cyx)
+            
             P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
             return Estimate(v,P)
 
