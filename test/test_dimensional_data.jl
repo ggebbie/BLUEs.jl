@@ -1,6 +1,6 @@
-@testset "block dimensional objects" begin
+@testset "dimensional data" begin
 
-    @testset "block dimensional state vectors" begin
+    @testset "state vectors" begin
 
         # fixed parameters
         @dim YearCE "years Common Era"
@@ -50,9 +50,6 @@
                     x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
 
                     # want uncertainties to be DimArrays also
-                    # if dims(P) == dims(x) then assume P is Diagonal
-                    #Py = σₙ^2 * ones(dims(x))
-                    #Px0 = σₓ^2 * ones(dims(x₀))
                     Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
                     x0 = Estimate( x₀, Px0);
                 end
@@ -89,23 +86,16 @@
             ytrue = observe(x)
             Py = σₙ^2 * BLUEs.diagonalmatrix(dims(ytrue))
             y = Estimate( ytrue, Py)
+
+            # test that these vectors;matrices can be used in algebraic expressions
+            yvmat = BLUEs.dimarray_to_matrix(y.v)
+            yvda = BLUEs.vector_to_dimarray(yvmat, dims(y.v))
+            @test y.v == yvda
+
+            yPmat = BLUEs.dimarray_to_matrix(y.P)
+            yPda = BLUEs.matrix_to_dimarray(yPmat, dims(y.P), dims(y.P))
+            @test y.P == yPda
             
-            # # probe to get E matrix. Use a convolution.
-            # # E = impulseresponse(observe,x₀)
-
-            # # test compatibility
-            # @test first(E*UnitfulMatrix(vec(x₀))) .== first(observe(x₀))
-            # @test first(E*vec(x₀)) .== first(observe(x₀)) # not necessary to transfer x₀ to UnitfulMatrix
-            # ỹ = E*UnitfulMatrix(vec(x)) # not necessary
-            # ỹ = E*vec(x)
-            # for jj in eachindex(y)
-            #     @test isapprox(vec(y)[jj],vec(ỹ)[jj])
-            # end
-            # x̂ = E\y
-            # for jj in eachindex(y)
-            #     @test isapprox(vec(y)[jj],vec(E*x̂)[jj])
-            # end
-
             # now in a position to use BLUEs to solve
             # WHEN using units, DEFINE ABOVE!!! revise here.
             if use_units
@@ -114,21 +104,15 @@
             else
             end
 
-            ## solving explicitly first
-            #y = up.y
-            # if ismissing(up.x₀)
-            #     n = y
-            # else
-            #    x₀ = up.x₀
-            #    n = y - up.E*x₀
-            #end
-
             Cyx = BLUEs.observematrix(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
             Cxy = BLUEs.transposematrix(Cyx)
             ECxy = BLUEs.observematrix(Cxy,M)
-            Cyy = up.E*Cxy + up.Cnn
-            v = Cxy*(Cyy \ n)
-            (~ismissing(up.x₀)) && (v += x₀)
+            Cyy = ECxy + y.P
+            y0 = convolve(x0.v,M)
+            n = y.v - y0
+            tmp = BLUEs.ldivmatrix(Cyy, n)
+            v = BLUEs.matmulmatrix(Cxy, tmp)
+
             P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
             return Estimate(v,P)
 

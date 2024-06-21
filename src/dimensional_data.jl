@@ -148,20 +148,62 @@ function diagonalmatrix(Pdims::Tuple)
     return DimArray(P,Pdims)
 end
 
+# use `vec`
+# function dimarray_to_vector(P::DimArray)
+#     # number of columns/ outer dims
+#     N = length(P)
+
+#     A = Vector{eltype(first(P))}(undef,N)
+#     for j in eachindex(P)
+#         A[j] = P[j][:]
+#     end
+#     return A
+# end
+# replace with `vec` operator
+
+"""
+function dimarray_to_matrix(P::DimArray)
+"""
 function dimarray_to_matrix(P::DimArray)
     # number of columns/ outer dims
     N = length(P)
-
     # number of rows, take first inner element as example
     M = length(first(P))
-
     A = Matrix{eltype(first(P))}(undef,M,N)
-    for j in eachindex(P)
-        A[:,j] = P[j][:]
+    if N > 1  
+        for j in eachindex(P)
+            A[:,j] = P[j][:]
+        end
+    elseif N == 1
+        #        return vec(P)
+        #M = length(first(P))
+        #A = Vector{eltype(first(P))}(undef,M)
+        for i in eachindex(first(P))
+            A[i,1] = first(P)[i]
+        end
     end
-    return A
+    return A 
 end
 
+"""
+function dimarray_to_vector(P::DimArray)
+"""
+function dimarray_to_vector(P::DimArray)
+    # number of columns/ outer dims
+    N = length(P)
+    (N > 1) && (error("not possible to make a vector"))
+    # number of rows, take first inner element as example
+    M = length(first(P))
+    A = Vector{eltype(first(P))}(undef,M)
+    for i in eachindex(first(P))
+        A[i] = first(P)[i]
+    end
+    return A 
+end
+
+"""
+function matrix_to_dimarray(A,rangedims,domaindims)
+"""
 function matrix_to_dimarray(A,rangedims,domaindims)
 
     # extra step for type stability
@@ -176,10 +218,40 @@ function matrix_to_dimarray(A,rangedims,domaindims)
     return DimArray(P, domaindims)
 end
 
+"""
+function vector_to_dimarray(A,rangedims)
+"""
+function vector_to_dimarray(A,rangedims)
+
+    # extra step for type stability
+    Q1 = reshape(A,size(rangedims))
+    return DimArray(Q1, rangedims)
+
+    # P = Array{typeof(P1)}(undef,size(domaindims))
+    # for j in eachindex(P)
+    #     Q = reshape(A[:,j],size(rangedims))
+    #     P[j] = DimArray(Q, rangedims)
+    # end
+    # return DimArray(P, domaindims)
+end
+
 function transposematrix(P::DimArray)
     ddims = dims(P)
     rdims = dims(first(P))
 
     A = dimarray_to_matrix(P)
     return matrix_to_dimarray( transpose(A), ddims, rdims)
+end
+
+function ldivmatrix(A::DimArray, b::DimArray)
+    Amat = dimarray_to_matrix(A) \ dimarray_to_vector(b)
+    (Amat isa Number) && (Amat = [Amat])
+    return DimArray(Amat, dims(A))
+end
+
+function matmulmatrix(A::DimArray, b::DimArray)
+    Amat = dimarray_to_matrix(A) * dimarray_to_matrix(b)
+    (Amat isa Number) && (Amat = [Amat])
+    rdims = dims(first(A))
+    return DimArray( reshape(Amat, size(rdims)), rdims)
 end
