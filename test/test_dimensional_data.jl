@@ -46,13 +46,13 @@
                     # DimArray is good enough. This is an array, not necessarily a matrix.
                     x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
                 else
-                    x = DimArray(ustrip.(parent(x)), dims(x))
+                    x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
                     x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
 
                     # want uncertainties to be DimArrays also
-                    Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
-                    x0 = Estimate( x₀, Px0);
+                    Px0 = σₓ^2 * K² * BLUEs.diagonalmatrix(dims(x₀))
                 end
+                x0 = Estimate( x₀, Px0);
                     
             elseif statevars
 

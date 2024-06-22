@@ -13,12 +13,30 @@ end
 
 function standard_error(P::DimArray)
     #sigma = similar(parent(P))
-    sigma = Array{eltype(eltype(P))}(undef,size(P))
+    inside_type = typeof(√P[1][1])
+    sigma = Array{inside_type}(undef,size(P))
     for i in eachindex(P)
         sigma[i] = √P[i][i]
     end
     return DimArray(sigma,dims(P))
 end
+# function standard_error(P::DimArray)
+#     #sigma = similar(parent(P))
+#     sigma = Array{eltype(eltype(P))}(undef,size(P))
+#     for i in eachindex(P)
+#         sigma[i] = √P[i][i]
+#     end
+#     return DimArray(sigma,dims(P))
+# end
+# Failed to add dispatch to handle when eltype is Quantity
+# function standard_error(P::DimArray{DimArray{T}}) where T <: Quantity 
+#     #sigma = similar(parent(P))
+#     sigma = Array{eltype(eltype(P))}(undef,size(P))
+#     for i in eachindex(P)
+#         sigma[i] = √P[i][i]
+#     end
+#     return DimArray(sigma,dims(P))
+# end
 
 #standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(P),first(dims(P)))
 
