@@ -162,9 +162,6 @@ function algebraic_object(P::DimArray{T}) where T <: AbstractDimArray
             A[:,j] = P[j][:]
         end
     elseif N == 1
-        #        return vec(P)
-        #M = length(first(P))
-        #A = Vector{eltype(first(P))}(undef,M)
         for i in eachindex(first(P))
             A[i,1] = first(P)[i]
         end
@@ -205,47 +202,45 @@ end
 function vector_to_dimarray(A,rangedims)
 """
 function vector_to_dimarray(A,rangedims)
-
-    # extra step for type stability
     Q1 = reshape(A,size(rangedims))
     return DimArray(Q1, rangedims)
-
-    # P = Array{typeof(P1)}(undef,size(domaindims))
-    # for j in eachindex(P)
-    #     Q = reshape(A[:,j],size(rangedims))
-    #     P[j] = DimArray(Q, rangedims)
-    # end
-    # return DimArray(P, domaindims)
 end
 
 function transposematrix(P::DimArray)
     ddims = dims(P)
     rdims = dims(first(P))
-
     A = algebraic_object(P)
     return matrix_to_dimarray( transpose(A), ddims, rdims)
 end
 
-function ldivmatrix(A::DimArray{T}, b::DimArray{T}) where T<: AbstractDimArray
+function ldivmatrix(A::DimArray, b::DimArray) 
     Amat = algebraic_object(A) \ algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
-    return DimArray(reshape(Amat, size(dims(A))), dims(A))
+    ddims = dims(b)
+    rdims = dims(A)
+    return matrix_to_dimarray(Amat, rdims, ddims)
+#    return DimArray(reshape(Amat, size(dims(A))), dims(A))
 end
-function ldivmatrix(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
-    Amat = algebraic_object(A) \ algebraic_object(b)
-    (Amat isa Number) && (Amat = [Amat])
-    return DimArray(reshape(Amat, size(dims(A))), dims(A))
-end
+# function ldivmatrix(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
+#     Amat = algebraic_object(A) \ algebraic_object(b)
+#     (Amat isa Number) && (Amat = [Amat])
+#     return DimArray(reshape(Amat, size(dims(A))), dims(A))
+# end
 
 function matmulmatrix(A::DimArray, b::DimArray{T}) where T <: Number
     Amat = algebraic_object(A) * algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
     rdims = dims(first(A))
-    return DimArray( reshape(Amat, size(rdims)), rdims)
+    return vector_to_dimarray(Amat, rdims)
+  # return DimArray( reshape(Amat, size(rdims)), rdims)
 end
 function matmulmatrix(A::DimArray, b::DimArray)
     Amat = algebraic_object(A) * algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
+#    rdims = dims(first(A))
+ #   return DimArray( reshape(Amat, size(rdims)), rdims)
+    ddims = dims(b)
     rdims = dims(first(A))
-    return DimArray( reshape(Amat, size(rdims)), rdims)
+    return matrix_to_dimarray(Amat, rdims, ddims)
+
 end

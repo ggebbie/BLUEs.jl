@@ -118,9 +118,8 @@
             tmp = BLUEs.ldivmatrix(Cyy, n)
             v = BLUEs.matmulmatrix(Cxy, tmp)
 
-            BLUEs.ldivmatrix(Cyy,Cyx)
-            
-            P = up.Cxx - Cxy*(Cyy\(transpose(Cxy)))
+            Pdecrease = BLUEs.matmulmatrix(Cxy,BLUEs.ldivmatrix(Cyy,Cyx))
+            P = x0.P - Pdecrease
             return Estimate(v,P)
 
             
