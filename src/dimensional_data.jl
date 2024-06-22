@@ -35,14 +35,14 @@ function Base.:\(A::AbstractDimMatrix,b::AbstractDimVector)
 end
 
 """
-    function `convolve(E::AbstractDimArray,x::AbstractDimArray)`
+function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
 
 Take the convolution of E and x
 Account for proper overlap of dimension.
 Sum and take into account units.
 Return an `AbstractDimArray`
 """
-function convolve(x::AbstractDimArray,E::AbstractDimArray)
+function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
     tnow = last(first(dims(x)))
     lags = first(dims(E))
     vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
@@ -109,7 +109,6 @@ end
 function observe(P::AbstractDimArray)
 
 functional form of E*P
-where P is a diagonal uncertainty matrix.
 P only stores the diagonals as could be
 identified from its type.
 """
@@ -119,6 +118,17 @@ function observematrix(P::DimArray,M)
     #typeout = typeof(out)
     in = convolve(first(P),M)
     typein = typeof(in)
+    Pyx = Array{typein}(undef,size(P))
+    for i in eachindex(P)
+#        Pyx[i] = observe(P[i])
+        Pyx[i] = convolve(P[i],M)
+    end
+    return DimArray(Pyx,dims(P))
+end
+function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+    in = convolve(first(P),M)
+    typein = typeof(in)
+    println(typein)
     Pyx = Array{typein}(undef,size(P))
     for i in eachindex(P)
 #        Pyx[i] = observe(P[i])
@@ -199,7 +209,7 @@ function vector_to_dimarray(A,rangedims)
     return DimArray(Q1, rangedims)
 end
 
-function transposematrix(P::DimArray)
+function algebraic_transpose(P::DimArray)
     ddims = dims(P)
     rdims = dims(first(P))
     A = algebraic_object(P)
@@ -236,4 +246,21 @@ function matmul(A::DimArray, b::DimArray)
     rdims = dims(first(A))
     return matrix_to_dimarray(Amat, rdims, ddims)
 
+end
+
+"""
+function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
+"""
+function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
+            Cyx = fmat(x0.P,farg) 
+            Cxy = algebraic_transpose(Cyx)
+            ECxy = fmat(Cxy,farg)
+            Cyy = ECxy + y.P
+            y0 = fvec(x0.v,farg)
+            n = y.v - y0
+            tmp = ldiv(Cyy, n)
+            v = matmul(Cxy, tmp)
+            Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+            P = x0.P - Pdecrease
+            return Estimate(v,P)
 end

@@ -106,10 +106,14 @@
 
             # check functional form of observational operator
             Imatrix = BLUEs.diagonalmatrix(dims(x₀))
-            Ematrix = BLUEs.observematrix(Imatrix,M) 
+            Ematrix = BLUEs.observematrix(Imatrix,M)
+            Ematrix2 = observe(Imatrix) 
             E = BLUEs.algebraic_object(Ematrix)
 
+            x1 = combine(x0,y,BLUEs.observematrix,BLUEs.convolve,M)
+
             Cyx = BLUEs.observematrix(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
+            Cyx2 = convolve(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
             Cxy = BLUEs.transposematrix(Cyx)
             ECxy = BLUEs.observematrix(Cxy,M)
             Cyy = ECxy + y.P
