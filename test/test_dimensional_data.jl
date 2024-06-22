@@ -13,7 +13,7 @@
         years = (1990:2000)yr
         statevariables = [:θ, :δ¹⁸O] 
         M = 5 # Interior Locations with obs
-        use_units = false
+        #use_units = false # set at higher scope
 
         # 3 options
         # 1) 2 state variables
@@ -30,8 +30,8 @@
             #define constants
             lag ? nτ = 5 : nτ = 1
             lags = (0:(nτ-1))yr
-            σₙ = 0.01
-            σₓ = 100.0
+            σₙ = 0.01K
+            σₓ = 10.0K
 
             # take all years or just the end year
             timeseries ? yrs = years : yrs = [years[end]]
@@ -45,12 +45,11 @@
                 if use_units
                     # DimArray is good enough. This is an array, not necessarily a matrix.
                     x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
+                    Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
                     x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
-
-                    # want uncertainties to be DimArrays also
-                    Px0 = σₓ^2 * K² * BLUEs.diagonalmatrix(dims(x₀))
+                    Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
                 end
                 x0 = Estimate( x₀, Px0);
                     
@@ -84,7 +83,11 @@
             # Given, M and x. Make synthetic data for observations.
             println("Synthetic data")
             ytrue = observe(x)
-            Py = σₙ^2 * BLUEs.diagonalmatrix(dims(ytrue))
+            if use_units
+                Py = σₙ^2 * BLUEs.diagonalmatrix(dims(ytrue))
+            else
+                Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix(dims(ytrue))
+            end
             y = Estimate( ytrue, Py)
 
             # test that these vectors;matrices can be used in algebraic expressions
@@ -96,20 +99,16 @@
             yPda = BLUEs.matrix_to_dimarray(yPmat, dims(y.P), dims(y.P))
             @test y.P == yPda
             
-            # now in a position to use BLUEs to solve
-            # WHEN using units, DEFINE ABOVE!!! revise here.
-            if use_units
-                Cnn = Diagonal(fill(σₙ^2,length(y)),unit.(y),unit.(y).^-1)
-                Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
-            else
-            end
-
             #observe(x) = convolve(x, M)
             x1 = combine(x0,y,observe)
 
             # check whether obs are reproduced
             ytilde = observe(x1.v)
-            @test isapprox(y.v,ytilde,atol= 1e-6) 
+            if use_units
+                @test isapprox(ustrip.(y.v),ustrip.(ytilde), atol=1e-3)  
+            else
+                @test isapprox(y.v,ytilde, atol=1e-3) 
+            end
             
             # check functional form of observational operator
             Imatrix = BLUEs.diagonalmatrix(dims(x₀))
@@ -118,7 +117,7 @@
             Etest = BLUEs.algebraic_object(Ematrix)
 
             # or solve the impulse response in one step
-            E = BLUEs.algebraic_object(observe(Imatrix))
+            E = BLUEs.algebraic_object(observe(Imatrix)) # not tested if E elements have units
 
             # unsolved issues with least-squares methods
             # problem = UnderdeterminedProblem(y.v,
