@@ -115,13 +115,12 @@
             Cyy = ECxy + y.P
             y0 = convolve(x0.v,M)
             n = y.v - y0
-            tmp = BLUEs.ldivmatrix(Cyy, n)
-            v = BLUEs.matmulmatrix(Cxy, tmp)
+            tmp = BLUEs.ldiv(Cyy, n)
+            v = BLUEs.matmul(Cxy, tmp)
 
-            Pdecrease = BLUEs.matmulmatrix(Cxy,BLUEs.ldivmatrix(Cyy,Cyx))
+            Pdecrease = BLUEs.matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
             P = x0.P - Pdecrease
             return Estimate(v,P)
-
             
             problem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
 

@@ -115,18 +115,11 @@ identified from its type.
 """
 function observematrix(P::DimArray,M)
 
-    #Pfull = zeros(dims(P))
-    #Pyx = similar(observe(first(P)))
-    out = zeros(dims(P))
-    typeout = typeof(out)
-    #in = observe(out)
-    #    in = convolve(out,M)
+    #out = zeros(dims(P))
+    #typeout = typeof(out)
     in = convolve(first(P),M)
     typein = typeof(in)
     Pyx = Array{typein}(undef,size(P))
-    
-    #domaindims = dims(P)
-    
     for i in eachindex(P)
 #        Pyx[i] = observe(P[i])
         Pyx[i] = convolve(P[i],M)
@@ -213,7 +206,7 @@ function transposematrix(P::DimArray)
     return matrix_to_dimarray( transpose(A), ddims, rdims)
 end
 
-function ldivmatrix(A::DimArray, b::DimArray) 
+function ldiv(A::DimArray, b::DimArray) 
     Amat = algebraic_object(A) \ algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
     ddims = dims(b)
@@ -221,20 +214,20 @@ function ldivmatrix(A::DimArray, b::DimArray)
     return matrix_to_dimarray(Amat, rdims, ddims)
 #    return DimArray(reshape(Amat, size(dims(A))), dims(A))
 end
-# function ldivmatrix(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
-#     Amat = algebraic_object(A) \ algebraic_object(b)
-#     (Amat isa Number) && (Amat = [Amat])
-#     return DimArray(reshape(Amat, size(dims(A))), dims(A))
-# end
+function ldiv(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
+    Amat = algebraic_object(A) \ algebraic_object(b)
+    (Amat isa Number) && (Amat = [Amat])
+    return DimArray(reshape(Amat, size(dims(A))), dims(A))
+end
 
-function matmulmatrix(A::DimArray, b::DimArray{T}) where T <: Number
+function matmul(A::DimArray, b::DimArray{T}) where T <: Number
     Amat = algebraic_object(A) * algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
     rdims = dims(first(A))
     return vector_to_dimarray(Amat, rdims)
   # return DimArray( reshape(Amat, size(rdims)), rdims)
 end
-function matmulmatrix(A::DimArray, b::DimArray)
+function matmul(A::DimArray, b::DimArray)
     Amat = algebraic_object(A) * algebraic_object(b)
     (Amat isa Number) && (Amat = [Amat])
 #    rdims = dims(first(A))
