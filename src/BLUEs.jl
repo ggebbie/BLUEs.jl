@@ -117,9 +117,9 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix)
     
         iPx = inv(x0.P)
         iPy = inv(y.P)
-        sumP = iPx + iPy
+        sumP = iPx + transpose(E)*iPy*E 
         P = inv(sumP)
-        v = P * (iPx * x0.v + iPy * y.v) 
+        v = P * (iPx * x0.v + transpose(E) * iPy * y.v) 
     else
         error("combine method not implemented")
     end
