@@ -1,4 +1,4 @@
-function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{Quantity{Float64}, 3})
+function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)
     statevars = x.dims[3]
     for (i, s) in enumerate(statevars)
