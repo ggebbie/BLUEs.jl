@@ -126,10 +126,8 @@ function observematrix(P::DimArray,M)
     return DimArray(Pyx,dims(P))
 end
 function convolve(P::DimArray{T},M) where T<: AbstractDimArray
-    in = convolve(first(P),M)
-    typein = typeof(in)
-    println(typein)
-    Pyx = Array{typein}(undef,size(P))
+    T2 = typeof(convolve(first(P),M))
+    Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
 #        Pyx[i] = observe(P[i])
         Pyx[i] = convolve(P[i],M)
@@ -257,6 +255,19 @@ function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
             ECxy = fmat(Cxy,farg)
             Cyy = ECxy + y.P
             y0 = fvec(x0.v,farg)
+            n = y.v - y0
+            tmp = ldiv(Cyy, n)
+            v = matmul(Cxy, tmp)
+            Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+            P = x0.P - Pdecrease
+            return Estimate(v,P)
+end
+function combine(x0::Estimate,y::Estimate,f::Function)
+            Cyx = f(x0.P) 
+            Cxy = algebraic_transpose(Cyx)
+            ECxy = f(Cxy)
+            Cyy = ECxy + y.P
+            y0 = f(x0.v)
             n = y.v - y0
             tmp = ldiv(Cyy, n)
             v = matmul(Cxy, tmp)

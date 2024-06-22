@@ -104,35 +104,34 @@
             else
             end
 
+            #observe(x) = convolve(x, M)
+            x1 = combine(x0,y,observe)
+
+            # check whether obs are reproduced
+            ytilde = observe(x1.v)
+            @test isapprox(y.v,ytilde,atol= 1e-6) 
+            
             # check functional form of observational operator
             Imatrix = BLUEs.diagonalmatrix(dims(x₀))
             Ematrix = BLUEs.observematrix(Imatrix,M)
             Ematrix2 = observe(Imatrix) 
-            E = BLUEs.algebraic_object(Ematrix)
+            Etest = BLUEs.algebraic_object(Ematrix)
 
-            x1 = combine(x0,y,BLUEs.observematrix,BLUEs.convolve,M)
+            # or solve the impulse response in one step
+            E = BLUEs.algebraic_object(observe(Imatrix))
 
-            Cyx = BLUEs.observematrix(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
-            Cyx2 = convolve(x0.P,M) # Cxy = up.Cxx*transpose(up.E)
-            Cxy = BLUEs.transposematrix(Cyx)
-            ECxy = BLUEs.observematrix(Cxy,M)
-            Cyy = ECxy + y.P
-            y0 = convolve(x0.v,M)
-            n = y.v - y0
-            tmp = BLUEs.ldiv(Cyy, n)
-            v = BLUEs.matmul(Cxy, tmp)
+            # unsolved issues with least-squares methods
+            # problem = UnderdeterminedProblem(y.v,
+            #     E,
+            #     BLUEs.algebraic_object(y.P),
+            #     BLUEs.algebraic_object(x0.P),
+            #     x0.v)
 
-            Pdecrease = BLUEs.matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
-            P = x0.P - Pdecrease
-            return Estimate(v,P)
-            
-            problem = UnderdeterminedProblem(y,E,Cnn,Cxx,x₀)
-
-            # when x₀ is a DimArray, then x̃ is a DimEstimate
-            x̃ = solve(problem) # ::DimEstimate
-            @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
-            @test cost(x̃,problem) < 5e-2 # no noise in ob
-            @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
+            # # when x₀ is a DimArray, then x̃ is a DimEstimate
+            # x̃ = solve(problem) # ::DimEstimate
+            # @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
+            # @test cost(x̃,problem) < 5e-2 # no noise in ob
+            # @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
 
             end
         end
