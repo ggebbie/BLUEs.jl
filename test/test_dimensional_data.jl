@@ -22,11 +22,10 @@
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-#        (statevars,timeseries,lag) = cases[2] # for interactive use
+#        (statevars,timeseries,lag) = cases[3] # for interactive use
         for (statevars,timeseries,lag) in cases
             println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
-            lag = false; timeseries = false; 
             #define constants
             lag ? nτ = 5 : nτ = 1
             lags = (0:(nτ-1))yr
@@ -73,14 +72,13 @@
 
             # Step 2: get observational operator.
             if timeseries && statevars
-                #Tx = first(dims(x)) # timeseries of observations at these times
-                #global predict(x) = convolve(x,M,Tx,coeffs)
-                global observe(x) = convolve(x,M,first(dims(x)),coeffs)
+                Tx = first(dims(x)) # timeseries of observations at these times
+                global observe(x) = convolve(x,M,Tx,coeffs)
             elseif statevars
                 global observe(x) = convolve(x,M,coeffs)
-            elseif timeseries
-                Tx = first(dims(x)) # timeseries of observations at these times
-                global observe(x) = convolve(x,M,Tx)
+            # elseif timeseries
+            #     Tx = first(dims(x)) # timeseries of observations at these times
+            #     global observe(x) = convolve(x,M,Tx)
             else
                 global observe(x) = convolve(x,M)
             end

@@ -142,24 +142,39 @@ function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<
     end
     return DimArray(Pyx,dims(P))
 end
-# function observematrix(P::DimArray,M)
-
-#     #out = zeros(dims(P))
-#     #typeout = typeof(out)
-#     in = convolve(first(P),M)
-#     typein = typeof(in)
-#     Pyx = Array{typein}(undef,size(P))
-#     for i in eachindex(P)
-# #        Pyx[i] = observe(P[i])
-#         Pyx[i] = convolve(P[i],M)
-#     end
-#     return DimArray(Pyx,dims(P))
-# end
 
 function convolve(x::DimArray{T}, M::AbstractDimArray, coeffs::DimVector) where T <: Number
     statevars = dims(x,3)
-    mat = sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
-    #return getindexqty(mat, 1,1)
+    return sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+end
+
+function convolve(x::DimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T <: Number
+    if ndims(M) == 2
+        return DimArray([convolve(x, M, Tx[tt], coeffs) for tt in eachindex(Tx)], Tx)
+    elseif ndims(M) == 3
+        error("some code should go here")
+    else
+        error("M has wrong number of dims") 
+    end
+end
+# basically repeats previous function: any way to simplify?
+function convolve(P::DimArray{T},M::AbstractDimArray,Tx::Ti, coeffs::DimVector) where T<: AbstractDimArray
+    T2 = typeof(convolve(first(P),M,Tx,coeffs))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        Pyx[i] = convolve(P[i],M,Tx,coeffs)
+    end
+    return DimArray(Pyx,dims(P))
+end
+
+function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::DimVector)
+    statevars = dims(x,3)
+    return sum([convolve(x[:,:,At(s)], E, t) * coeffs[At(s)] for s in statevars])
+end
+
+function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
+    lags = first(dims(E))
+    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
 
 function diagonalmatrix(Pdims::Tuple)
