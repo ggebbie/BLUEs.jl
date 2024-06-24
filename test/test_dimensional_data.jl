@@ -22,7 +22,7 @@
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-#        (statevars,timeseries,lag) = cases[3] # for interactive use
+#        (statevars,timeseries,lag) = cases[2] # for interactive use
         for (statevars,timeseries,lag) in cases
             println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
@@ -59,6 +59,8 @@
                 coeffs = DimArray(rand(2).*[permil/K,NoUnits], StateVariable(statevariables))
                 x₀ = 0.0 * x
                 if use_units
+                    #x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
+                    Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix_with_units(x₀)
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
                     x₀ = zeros(dims(x)) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
@@ -87,7 +89,8 @@
             println("Synthetic data")
             ytrue = observe(x)
             if use_units
-                Py = σₙ^2 * BLUEs.diagonalmatrix(dims(ytrue))
+                Py = BLUEs.diagonalmatrix_with_units(ytrue)
+#                                Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix_with_units(ytrue)
             else
                 Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix(dims(ytrue))
             end

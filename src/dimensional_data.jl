@@ -13,8 +13,13 @@ end
 
 function standard_error(P::DimArray)
     #sigma = similar(parent(P))
-    inside_type = typeof(√P[1][1])
-    sigma = Array{inside_type}(undef,size(P))
+    if dimensionless(first(first(P))) # assumes first element gives right answer
+        inside_type = typeof(√P[1][1])
+        sigma = Array{inside_type}(undef,size(P))
+    else
+        sigma = Array{Quantity}(undef,size(P))
+    end
+    
     for i in eachindex(P)
         sigma[i] = √P[i][i]
     end
@@ -189,6 +194,39 @@ function diagonalmatrix(Pdims::Tuple)
         P[i][i] += 1.0
     end
     return DimArray(P,Pdims)
+end
+
+function uncertainty_units(x::DimArray{T}) where T<: Number
+
+    unitlist = unit.(x)
+    U = Array{typeof(unitlist)}(undef,size(unitlist))
+
+    for i in eachindex(U)
+        U[i] = similar(unitlist)# Array{typeof(unitlist)}(undef,size(unitlist))
+        for j in eachindex(U)
+            U[i][j] = unitlist[i]*unitlist[j]
+        end
+    end
+    return DimArray(U,dims(x))
+end
+
+function diagonalmatrix_with_units(x::DimArray{T}) where T<: Number
+
+    unitlist = 1.0.*unit.(x)
+    U = Array{typeof(unitlist)}(undef,size(unitlist))
+
+    for i in eachindex(U)
+        U[i] = similar(unitlist)
+        #U[i] = Array{Quantity}(undef,size(unitlist))
+        for j in eachindex(U)
+            if i == j 
+                U[i][j] = unitlist[i]*unitlist[j]
+            else
+                U[i][j] = 0.0.*unitlist[i]*unitlist[j]
+            end
+        end
+    end
+    return DimArray(U,dims(x))
 end
 
 """
