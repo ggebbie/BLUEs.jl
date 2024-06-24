@@ -56,15 +56,17 @@
             elseif statevars
 
                 x = source_water_solution(surfaceregions, years, statevariables)
-                coeffs = UnitfulMatrix(rand(2,1), [NoUnits, K], [K/permil])
-                x₀ = copy(x).*0
+                #coeffs = UnitfulMatrix(rand(2,1), [NoUnits, K], [K/permil])
+                coeffs = DimArray(rand(2).*[permil/K,NoUnits], StateVariable(statevariables))
+                x₀ = 0.0 * x
                 if use_units
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
-                    x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
+                    x₀ = zeros(dims(x)) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
                     Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
+                    coeffs = DimArray(ustrip.(parent(coeffs)), dims(coeffs)) 
                 end
-
+                x0 = Estimate(x₀,Px0)
             else
                 error("no case")
             end

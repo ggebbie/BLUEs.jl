@@ -123,26 +123,6 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     end
 end
 
-"""
-function observe(P::AbstractDimArray)
-
-functional form of E*P
-P only stores the diagonals as could be
-identified from its type.
-"""
-function observematrix(P::DimArray,M)
-
-    #out = zeros(dims(P))
-    #typeout = typeof(out)
-    in = convolve(first(P),M)
-    typein = typeof(in)
-    Pyx = Array{typein}(undef,size(P))
-    for i in eachindex(P)
-#        Pyx[i] = observe(P[i])
-        Pyx[i] = convolve(P[i],M)
-    end
-    return DimArray(Pyx,dims(P))
-end
 function convolve(P::DimArray{T},M) where T<: AbstractDimArray
     T2 = typeof(convolve(first(P),M))
     Pyx = Array{T2}(undef,size(P))
@@ -151,6 +131,25 @@ function convolve(P::DimArray{T},M) where T<: AbstractDimArray
         Pyx[i] = convolve(P[i],M)
     end
     return DimArray(Pyx,dims(P))
+end
+# function observematrix(P::DimArray,M)
+
+#     #out = zeros(dims(P))
+#     #typeout = typeof(out)
+#     in = convolve(first(P),M)
+#     typein = typeof(in)
+#     Pyx = Array{typein}(undef,size(P))
+#     for i in eachindex(P)
+# #        Pyx[i] = observe(P[i])
+#         Pyx[i] = convolve(P[i],M)
+#     end
+#     return DimArray(Pyx,dims(P))
+# end
+
+function convolve(x::DimArray{T}, M::AbstractDimArray, coeffs::DimVector) where T <: Number
+    statevars = dims(x,3)
+    mat = [convolve(x[:,:,At(s)], M)  for s in statevars] * coeffs
+    #return getindexqty(mat, 1,1)
 end
 
 function diagonalmatrix(Pdims::Tuple)
@@ -267,29 +266,31 @@ end
 """
 function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
 """
-function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
-            Cyx = fmat(x0.P,farg) 
-            Cxy = algebraic_transpose(Cyx)
-            ECxy = fmat(Cxy,farg)
-            Cyy = ECxy + y.P
-            y0 = fvec(x0.v,farg)
-            n = y.v - y0
-            tmp = ldiv(Cyy, n)
-            v = matmul(Cxy, tmp)
-            Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
-            P = x0.P - Pdecrease
-            return Estimate(v,P)
-end
+# function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
+#             Cyx = fmat(x0.P,farg) 
+#             Cxy = algebraic_transpose(Cyx)
+#             ECxy = fmat(Cxy,farg)
+#             Cyy = ECxy + y.P
+#             y0 = fvec(x0.v,farg)
+#             n = y.v - y0
+#             tmp = ldiv(Cyy, n)
+#             v = matmul(Cxy, tmp)
+#             Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+#             P = x0.P - Pdecrease
+#             return Estimate(v,P)
+# end
 function combine(x0::Estimate,y::Estimate,f::Function)
-            Cyx = f(x0.P) 
-            Cxy = algebraic_transpose(Cyx)
-            ECxy = f(Cxy)
-            Cyy = ECxy + y.P
-            y0 = f(x0.v)
-            n = y.v - y0
-            tmp = ldiv(Cyy, n)
-            v = matmul(Cxy, tmp)
-            Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
-            P = x0.P - Pdecrease
-            return Estimate(v,P)
+
+    # written for efficiency with underdetermined problems
+    Cyx = f(x0.P) 
+    Cxy = algebraic_transpose(Cyx)
+    ECxy = f(Cxy)
+    Cyy = ECxy + y.P
+    y0 = f(x0.v)
+    n = y.v - y0
+    tmp = ldiv(Cyy, n)
+    v = matmul(Cxy, tmp)
+    Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+    P = x0.P - Pdecrease
+    return Estimate(v,P)
 end
