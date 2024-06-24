@@ -148,7 +148,7 @@ end
 
 function convolve(x::DimArray{T}, M::AbstractDimArray, coeffs::DimVector) where T <: Number
     statevars = dims(x,3)
-    mat = [convolve(x[:,:,At(s)], M)  for s in statevars] * coeffs
+    mat = sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
     #return getindexqty(mat, 1,1)
 end
 
