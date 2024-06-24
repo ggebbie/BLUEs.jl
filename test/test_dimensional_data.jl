@@ -117,8 +117,7 @@
             
             # check functional form of observational operator
             Imatrix = BLUEs.diagonalmatrix(dims(x₀))
-            Ematrix = BLUEs.observematrix(Imatrix,M)
-            Ematrix2 = observe(Imatrix) 
+            Ematrix = observe(Imatrix) 
             Etest = BLUEs.algebraic_object(Ematrix)
 
             # or solve the impulse response in one step

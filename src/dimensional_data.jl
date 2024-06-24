@@ -132,6 +132,16 @@ function convolve(P::DimArray{T},M) where T<: AbstractDimArray
     end
     return DimArray(Pyx,dims(P))
 end
+# basically repeats previous function: any way to simplify?
+function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<: AbstractDimArray
+    T2 = typeof(convolve(first(P),M,coeffs))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+#        Pyx[i] = observe(P[i])
+        Pyx[i] = convolve(P[i],M,coeffs)
+    end
+    return DimArray(Pyx,dims(P))
+end
 # function observematrix(P::DimArray,M)
 
 #     #out = zeros(dims(P))
@@ -280,7 +290,6 @@ function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
 #             return Estimate(v,P)
 # end
 function combine(x0::Estimate,y::Estimate,f::Function)
-
     # written for efficiency with underdetermined problems
     Cyx = f(x0.P) 
     Cxy = algebraic_transpose(Cyx)
