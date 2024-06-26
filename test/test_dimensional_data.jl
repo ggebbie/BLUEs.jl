@@ -45,11 +45,11 @@
                     # DimArray is good enough. This is an array, not necessarily a matrix.
                     x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
                     D = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
-                    Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
+                    #Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
 
                     urange = unit.(x)
                     udomain = unit.(inv.(x))
-                    Px0 = UnitfulMatrix(D,(urange,udomain))
+                    Px0 = UnitfulMatrix(D,(urange,udomain));
 
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
