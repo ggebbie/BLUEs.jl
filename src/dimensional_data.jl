@@ -177,10 +177,10 @@ function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::D
     return sum([convolve(x[:,:,At(s)], E, t) * coeffs[At(s)] for s in statevars])
 end
 
-function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
-    lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
-end
+# function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
+#     lags = first(dims(E))
+#     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+# end
 
 function diagonalmatrix(Pdims::Tuple)
 

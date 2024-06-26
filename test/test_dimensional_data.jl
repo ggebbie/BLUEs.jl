@@ -22,7 +22,7 @@
 
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-#        (statevars,timeseries,lag) = cases[2] # for interactive use
+#        (statevars,timeseries,lag) = cases[1] # for interactive use
         for (statevars,timeseries,lag) in cases
             println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
@@ -44,7 +44,13 @@
                 if use_units
                     # DimArray is good enough. This is an array, not necessarily a matrix.
                     x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
+                    D = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
                     Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
+
+                    urange = unit.(x)
+                    udomain = unit.(inv.(x))
+                    Px0 = UnitfulMatrix(D,(urange,udomain))
+
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
                     x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
