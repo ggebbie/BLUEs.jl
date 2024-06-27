@@ -54,9 +54,11 @@
                 else
                     x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
                     x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
-                    Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
+                    d  = fill(ustrip.(σₓ)^2,length(x))
+                    Px0 = MultipliableDimArrays.DiagonalDimArray(d, dims(x))
+#                    Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
                 end
-                x0 = Estimate( x₀, Px0);
+                x0 = Estimate( x₀, Px0)
                     
             elseif statevars
 
@@ -98,19 +100,12 @@
                 Py = BLUEs.diagonalmatrix_with_units(ytrue)
 #                                Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix_with_units(ytrue)
             else
-                Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix(dims(ytrue))
+                d  = fill(ustrip.(σₙ)^2,length(ytrue))
+                Py = MultipliableDimArrays.DiagonalDimArray(d, dims(ytrue))
+#                Py =  * BLUEs.diagonalmatrix(dims(ytrue))
             end
             y = Estimate( ytrue, Py)
 
-            # test that these vectors;matrices can be used in algebraic expressions
-            yvmat = BLUEs.algebraic_object(y.v)
-            yvda = BLUEs.vector_to_dimarray(yvmat, dims(y.v))
-            @test y.v == yvda
-
-            yPmat = BLUEs.algebraic_object(y.P)
-            yPda = BLUEs.matrix_to_dimarray(yPmat, dims(y.P), dims(y.P))
-            @test y.P == yPda
-            
             #observe(x) = convolve(x, M)
             x1 = combine(x0,y,observe)
 
@@ -123,12 +118,13 @@
             end
             
             # check functional form of observational operator
-            Imatrix = BLUEs.diagonalmatrix(dims(x₀))
-            Ematrix = observe(Imatrix) 
-            Etest = BLUEs.algebraic_object(Ematrix)
+            Imatrix = DiagonalDimArray(ones(length(x)), dims(x))
+            Ematrix = observe(Imatrix)
+            # uses Core.Matrix instead of MultipliableDimArrays, don't know why            
+            Etest = MultipliableDimArrays.Matrix(Ematrix)
 
             # or solve the impulse response in one step
-            E = BLUEs.algebraic_object(observe(Imatrix)) # not tested if E elements have units
+            E = MultipliableDimArrays.Matrix(observe(Imatrix)) # not tested if E elements have units
 
             # unsolved issues with least-squares methods
             # problem = UnderdeterminedProblem(y.v,

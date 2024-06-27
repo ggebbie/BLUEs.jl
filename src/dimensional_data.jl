@@ -345,14 +345,17 @@ function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
 function combine(x0::Estimate,y::Estimate,f::Function)
     # written for efficiency with underdetermined problems
     Cyx = f(x0.P) 
-    Cxy = algebraic_transpose(Cyx)
+    Cxy = transpose(Cyx)
     ECxy = f(Cxy)
     Cyy = ECxy + y.P
     y0 = f(x0.v)
     n = y.v - y0
-    tmp = ldiv(Cyy, n)
-    v = matmul(Cxy, tmp)
-    Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+    #tmp = ldiv(Cyy, n)
+    tmp = Cyy \ n
+#    v = matmul(Cxy, tmp)
+    v = Cxy * tmp
+#    Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
+    Pdecrease = Cxy * (Cyy \ Cyx)
     P = x0.P - Pdecrease
     return Estimate(v,P)
 end
