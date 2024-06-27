@@ -45,18 +45,6 @@ end
 
 #standard_error(P::AbstractDimArray{T,2}) where T <: Number = DimArray(.√diag(P),first(dims(P)))
 
-# """
-#      function left divide
-
-#      Left divide of Multipliable Matrix.
-#      Reverse mapping from unitdomain to range.
-#      Is `exact` if input is exact.
-# """
-# function Base.:\(A::AbstractDimMatrix,b::AbstractDimVector)
-#     DimensionalData.comparedims(first(dims(A)), first(dims(b)); val=true)
-#     return rebuild(A,parent(A)\parent(b),(last(dims(A)),)) 
-# end
-
 """
 function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
 
@@ -182,20 +170,6 @@ end
 #     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 # end
 
-# function diagonalmatrix(Pdims::Tuple)
-
-#     tmp = zeros(Pdims)
-#     typetmp = typeof(tmp)
-
-#     P = Array{typetmp}(undef,size(tmp))
-
-#     for i in eachindex(P)
-#         P[i] = zeros(Pdims)
-#         P[i][i] += 1.0
-#     end
-#     return DimArray(P,Pdims)
-# end
-
 function uncertainty_units(x::DimArray{T}) where T<: Number
 
     unitlist = unit.(x)
@@ -229,119 +203,9 @@ function diagonalmatrix_with_units(x::DimArray{T}) where T<: Number
     return DimArray(U,dims(x))
 end
 
-# """
-# function algebraic_object(P::DimArray{T}) where T <: AbstractDimArray
-# """
-# function algebraic_object(P::DimArray{T}) where T <: AbstractDimArray
-#     # number of columns/ outer dims
-#     N = length(P)
-#     # number of rows, take first inner element as example
-#     M = length(first(P))
-#     A = Matrix{eltype(first(P))}(undef,M,N)
-#     if N > 1  
-#         for j in eachindex(P)
-#             A[:,j] = P[j][:]
-#         end
-#     elseif N == 1
-#         for i in eachindex(first(P))
-#             A[i,1] = first(P)[i]
-#         end
-#     end
-#     return A 
-# end
-
-# """
-# function algebraic_object(P::DimArray{Number})
-# """
-# function algebraic_object(P::DimArray{T}) where T <: Number
-#     M = length(P)
-#     A = Vector{T}(undef,M)
-#     for i in eachindex(P)
-#         A[i] = P[i]
-#     end
-#     return A 
-# end
-
-# """
-# function matrix_to_dimarray(A,rangedims,domaindims)
-# """
-# function matrix_to_dimarray(A,rangedims,domaindims)
-
-#     # extra step for type stability
-#     Q1 = reshape(A[:,1],size(rangedims))
-#     P1 = DimArray(Q1, rangedims)
-
-#     P = Array{typeof(P1)}(undef,size(domaindims))
-#     for j in eachindex(P)
-#         Q = reshape(A[:,j],size(rangedims))
-#         P[j] = DimArray(Q, rangedims)
-#     end
-#     return DimArray(P, domaindims)
-# end
-
-# """
-# function vector_to_dimarray(A,rangedims)
-# """
-# function vector_to_dimarray(A,rangedims)
-#     Q1 = reshape(A,size(rangedims))
-#     return DimArray(Q1, rangedims)
-# end
-
-# function algebraic_transpose(P::DimArray)
-#     ddims = dims(P)
-#     rdims = dims(first(P))
-#     A = algebraic_object(P)
-#     return matrix_to_dimarray( transpose(A), ddims, rdims)
-# end
-
-# function ldiv(A::DimArray, b::DimArray) 
-#     Amat = algebraic_object(A) \ algebraic_object(b)
-#     (Amat isa Number) && (Amat = [Amat])
-#     ddims = dims(b)
-#     rdims = dims(A)
-#     return matrix_to_dimarray(Amat, rdims, ddims)
-# #    return DimArray(reshape(Amat, size(dims(A))), dims(A))
-# end
-# function ldiv(A::DimArray{T1}, b::DimArray{T2}) where T1<: AbstractDimArray where T2 <: Number
-#     Amat = algebraic_object(A) \ algebraic_object(b)
-#     (Amat isa Number) && (Amat = [Amat])
-#     return DimArray(reshape(Amat, size(dims(A))), dims(A))
-# end
-
-# function matmul(A::DimArray, b::DimArray{T}) where T <: Number
-#     Amat = algebraic_object(A) * algebraic_object(b)
-#     (Amat isa Number) && (Amat = [Amat])
-#     rdims = dims(first(A))
-#     return vector_to_dimarray(Amat, rdims)
-#   # return DimArray( reshape(Amat, size(rdims)), rdims)
-# end
-# function matmul(A::DimArray, b::DimArray)
-#     Amat = algebraic_object(A) * algebraic_object(b)
-#     (Amat isa Number) && (Amat = [Amat])
-# #    rdims = dims(first(A))
-#  #   return DimArray( reshape(Amat, size(rdims)), rdims)
-#     ddims = dims(b)
-#     rdims = dims(first(A))
-#     return matrix_to_dimarray(Amat, rdims, ddims)
-
-# end
-
 """
 function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
 """
-# function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
-#             Cyx = fmat(x0.P,farg) 
-#             Cxy = algebraic_transpose(Cyx)
-#             ECxy = fmat(Cxy,farg)
-#             Cyy = ECxy + y.P
-#             y0 = fvec(x0.v,farg)
-#             n = y.v - y0
-#             tmp = ldiv(Cyy, n)
-#             v = matmul(Cxy, tmp)
-#             Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
-#             P = x0.P - Pdecrease
-#             return Estimate(v,P)
-# end
 function combine(x0::Estimate,y::Estimate,f::Function)
     # written for efficiency with underdetermined problems
     Cyx = f(x0.P) 
