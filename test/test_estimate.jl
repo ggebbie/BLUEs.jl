@@ -24,7 +24,7 @@
     # central estimate should not change
     @test isapprox( xplus.v, x.v )
 
-        # combine two estimates
+    # combine two estimates
     @time xplus = combine(x,x,alg=:overdetermined)
     @time xplus = combine(x,x,alg=:underdetermined)
     # error should decrease by 70%
@@ -54,7 +54,7 @@ end
         y = E*x
 
         if M == N
-            xtilde1 = inv(E)*y
+            xtilde1 = inv(E)*y # use inv for this special repeat, repeat with left divide below
             if use_units
                 @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8m)) == N 
                 @test within(x.P, xtilde1.P,1e-10) # from UnitfulLinearAlgebra
@@ -250,7 +250,8 @@ end
         τ = range(0.0yr,5.0yr,step=0.1yr)
         ρ = exp.(-τ.^2/(1yr)^2)
         n = length(ρ)
-        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) + Diagonal(fill(1e-6,n),fill(cm,n),fill(cm^-1,n))
+        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) +
+            Diagonal(fill(1e-6,n),fill(cm,n),fill(cm^-1,n))
         σₙ = 0.1cm
         Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M))
         Enm = sparse(1:M,1:5:n,fill(1.0,M))

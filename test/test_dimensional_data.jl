@@ -13,7 +13,6 @@
         years = (1990:2000)yr
         statevariables = [:θ, :δ¹⁸O] 
         M = 5 # Interior Locations with obs
-        #use_units = false # set at higher scope
 
         # 3 options
         # 1) 2 state variables
@@ -52,10 +51,10 @@
                     Px0 = UnitfulMatrix(D,(urange,udomain));
 
                 else
-                    x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
-                    x₀ = DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
-                    d  = fill(ustrip.(σₓ)^2,length(x))
-                    Px0 = DiagonalDimArray(d, dims(x))
+                    x = ustrip.(x) # extra step: remove units
+                    x₀ = zeros(dims(x),:VectorArray)
+                    d  = AlgebraicArray(fill(ustrip.(σₓ)^2,length(x)),dims(x))
+                    Px0 = Diagonal(d)
                 end
                 x0 = Estimate( x₀, Px0)
                     

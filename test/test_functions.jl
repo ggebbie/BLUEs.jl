@@ -1,4 +1,3 @@
-
 """
     Are two matrices within a certain tolerance?
     Use to simplify tests.
@@ -138,7 +137,7 @@ function source_water_solution(surfaceregions,years)
     K = u"K"
     m = length(years)
     n = length(surfaceregions)
-    x = DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions)))
+    x = VectorArray(DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions))))
     return x
 end
 

@@ -9,13 +9,14 @@ using ToeplitzMatrices
 using SparseArrays
 using DimensionalData
 using DimensionalData:@dim
-using MultipliableDimArrays
+using AlgebraicArrays 
 const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 const permil = Unitful.FixedUnits(u"permille")
 
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
-include("test_functions.jl")
+# requires Revise
+includet("test_functions.jl")
 
 @testset "BLUEs.jl" begin
 
