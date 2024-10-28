@@ -7,11 +7,29 @@
 \usepackage{textcomp}
 \usepackage{hyperref}
 \usepackage{amsmath}
-\title{Here's Some Math}
+\title{\texttt{BLUEs.jl}: Best Linear Unbiased Estimators for Julia}
 \author{Brynnydd Hamilton, Jake Gebbie}
 \date{\today}
 \begin{document}
 \maketitle
+
+\section{\texttt{combine} function}
+
+The master equations follow for the overdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master5}
+{\tilde {\bf x}} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}^{-1}_{xx})^{-1} ({\bf E}^T {\bf R}_{nn}^{-1} {\bf y} + {\bf C}_{xx}^{-1} {\bf x}_0), \\
+\label{eq:master6}
+{\bf P} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}_{xx}^{-1})^{-1},
+\end{eqnarray}
+and the underdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master7}
+{\tilde {\bf x}} &=& {\bf x}_0 + {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} ({\bf y}-{\bf Ex}_0) \\
+\label{eq:master8}
+\bf{P} &=& {\bf C}_{xx} - {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} {\bf EC}_{xx}.
+\end{eqnarray}
+
 \section{Single model ``textbook'' solution, no prior}
 This math follows Section 1.3.4. in Dynamical Insights from Data, and derives the equation behind the ``solve\_textbook'' method in BLUEs.jl. 
 We seek to solve the system
