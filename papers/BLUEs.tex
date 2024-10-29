@@ -15,20 +15,98 @@
 
 \section{\texttt{combine} function}
 
-The master equations follow for the overdetermined formulation,
-\begin{eqnarray}
-  \label{eq:master5}
-{\tilde {\bf x}} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}^{-1}_{xx})^{-1} ({\bf E}^T {\bf R}_{nn}^{-1} {\bf y} + {\bf C}_{xx}^{-1} {\bf x}_0), \\
-\label{eq:master6}
-{\bf P} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}_{xx}^{-1})^{-1},
-\end{eqnarray}
-and the underdetermined formulation,
-\begin{eqnarray}
-  \label{eq:master7}
-{\tilde {\bf x}} &=& {\bf x}_0 + {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} ({\bf y}-{\bf Ex}_0) \\
-\label{eq:master8}
-\bf{P} &=& {\bf C}_{xx} - {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} {\bf EC}_{xx}.
-\end{eqnarray}
+\subsection{Combination of two estimates of same dimension}
+\label{sec:basic-form}
+
+Consider a case where there are $N$ estimates, $\mathbf{x}_i$ for $i = 1 \rightarrow N$, of the same dimension are combined into a new estimate, $\tilde{\mathbf{x}}$.
+
+\textbf{{Overdetermined formula}}
+
+\begin{equation}
+\label{eq:18}
+\tilde{\mathbf{x}} = \left(\sum_{i=1}^N {\bf P}_i^{-1}\right)^{-1} {\bf P}_i^{-1} {\bf x}_i,
+\end{equation}
+and the resulting uncertainty is,
+\begin{equation}
+\label{eq:19}
+\tilde{{\bf P}} = \left(\sum_{i=1}^N{\bf P}_i^{-1}\right)^{-1}
+%( {\bf P}_y^{-1} + {\bf P}_{x}^{-1})^{-1}.
+\end{equation}
+
+\textbf{{Underdetermined formula}}
+
+The underdetermined formula is easiest to derive for two estimates, \textbf{x}$_1$ and \textbf{x}$_2$:
+\begin{equation}
+\label{eq:15}
+\tilde{\mathbf{x}} = \mathbf{x}_{1} + \mathbf{P}_1 (\mathbf{P}_1 + \mathbf{P}_2 )^{-1} (\mathbf{x}_2 - \mathbf{x}_1) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} can be interchanged. The reduced uncertainty is:
+\begin{equation}
+\label{eq:16}
+\tilde{\mathbf{P}} = \mathbf{P}_1 - \mathbf{P}_1 (\mathbf{P}_1 + \mathbf{P}_2 )^{-1} \mathbf{P}_1.
+\end{equation}
+
+\subsection{Differing dimensions}
+\label{sec:differing-dimensions}
+
+Again we have two estimates, \textbf{x} and \textbf{y}, but they are not necessary of the same dimension, and instead they are related by,
+\begin{equation}
+\label{eq:17}
+\mathbf{y} = \mathbf{Ex} + \mathbf{n}.
+\end{equation}
+
+\textbf{{Underdetermined formula}}
+
+They can be combined into a new estimate, \textbf{z}:
+\begin{equation}
+\label{eq:15}
+\mathbf{z} = \mathbf{x} + \mathbf{P}_x \mathbf{E}^T (\mathbf{E} \mathbf{P}_x \mathbf{E}^T + \mathbf{P}_y )^{-1} (\mathbf{y} - \mathbf{Ex}) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} are not interchangeable. The reduced uncertainty is:
+\begin{equation}
+\label{eq:16}
+\mathbf{P}_{z} = \mathbf{P}_x - \mathbf{P}_x \mathbf{E}^T (\mathbf{E} \mathbf{P}_x \mathbf{E}^T + \mathbf{P}_y )^{-1} \mathbf{E} \mathbf{P}_x
+\end{equation}
+
+\textbf{{Overdetermined formula}}
+
+\begin{equation}
+\label{eq:18}
+\mathbf{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}^{-1}_x)^{-1} ({\bf E}^T {\bf P}_y^{-1} {\bf y} + {\bf P}_x^{-1} {\bf x}),
+\end{equation}
+and the resulting uncertainty is,
+\begin{equation}
+\label{eq:19}
+{\bf P}_{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}_{x}^{-1})^{-1}.
+\end{equation}
+
+\subsection{Functional form}
+\label{sec:functional-form}
+
+\section{\texttt{update} function}
+
+\subsection{Combination of two estimates of same dimension}
+\label{sec:basic-form}
+
+Consider a case with one estimate, \textbf{x}, that will be updated with information from a new estimate, \textbf{y}, of the same dimension.
+% Define \textbf{x} to have a value, $\mathbf{x}^-$, before the new information, and $\mathbf{x}^+$ after the new information.
+Then the update is,
+\begin{equation}
+\label{eq:15}
+\delta\mathbf{x} = \mathbf{P}_x (\mathbf{P}_x + \mathbf{P}_y )^{-1} \delta\mathbf{y} .
+\end{equation}
+where $\delta \mathbf{y} = \mathbf{y} - \mathbf{x}$.
+%and $\delta \mathbf{x} = \mathbf{x}^+ - \mathbf{x}^-$.
+% \begin{equation}
+% \label{eq:15}
+% \mathbf{x}(+) - \mathbf{x}(-) = \mathbf{P}_x(-) (\mathbf{P}_x(-) + \mathbf{P}_y )^{-1} (\mathbf{y} - \mathbf{x}(-)) .
+% \end{equation}
+The uncertainty reduces by an amount, $\delta\mathbf{P}$, that is:
+\begin{equation}
+\label{eq:16}
+\delta\mathbf{P}_{x} = - \mathbf{P}_x (\mathbf{P}_x + \mathbf{P}_y )^{-1} \mathbf{P}_x.
+\end{equation}
+
 
 \section{Single model ``textbook'' solution, no prior}
 This math follows Section 1.3.4. in Dynamical Insights from Data, and derives the equation behind the ``solve\_textbook'' method in BLUEs.jl. 
@@ -100,6 +178,27 @@ If we set Equation \ref{eq:13} equal to 0, and solve for $\mathbf{\tilde{x}}$, w
 \label{eq:14}
 \mathbf{\tilde{x}} = \left(\sum_{i}^{N}\mathbf{E}^{T}_{i}\mathbf{C_{nn}}^{-1}_{(i)}\mathbf{E}_i\right)^{-1} \left(\sum_{i}^{N} \mathbf{E}_{i}^{T} \mathbf{C_{nn}}^{-1}_{(i)}\mathbf{y}_{i}\right)
 \end{equation}
+
+\section{Master equations}
+\label{sec:master-equations}
+
+
+
+The master equations follow for the overdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master5}
+{\tilde {\bf x}} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}^{-1}_{xx})^{-1} ({\bf E}^T {\bf R}_{nn}^{-1} {\bf y} + {\bf C}_{xx}^{-1} {\bf x}_0), \\
+\label{eq:master6}
+{\bf P} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}_{xx}^{-1})^{-1},
+\end{eqnarray}
+and the underdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master7}
+{\tilde {\bf x}} &=& {\bf x}_0 + {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} ({\bf y}-{\bf Ex}_0) \\
+\label{eq:master8}
+\bf{P} &=& {\bf C}_{xx} - {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} {\bf EC}_{xx}.
+\end{eqnarray}
+
 \end{document}
 %%% Local Variables:
 %%% mode: latex
