@@ -28,7 +28,7 @@
             #define constants
             lag ? nτ = 5 : nτ = 1
             lags = (0:(nτ-1))yr
-            σₙ = 0.01K
+            σn = 0.01K
             σₓ = 10.0K
 
             # take all years or just the end year
@@ -97,12 +97,19 @@
             ytrue = observe(x)
             if use_units
                 Py = BLUEs.diagonalmatrix_with_units(ytrue)
-#                                Py = ustrip.(σₙ)^2 * BLUEs.diagonalmatrix_with_units(ytrue)
+#                                Py = ustrip.(σn)^2 * BLUEs.diagonalmatrix_with_units(ytrue)
             else
-                d  = fill(ustrip.(σₙ)^2,length(ytrue))
-                Py = MultipliableDimArrays.DiagonalDimArray(d, dims(ytrue))
+                if ytrue isa Number
+                    Py = ustrip.(σn)^2
+                    y = Estimate( [ytrue], [Py;;])
+                else 
+                    dy  = AlgebraicArray(fill(ustrip.(σn)^2,length(ytrue)),rangedims(ytrue))
+                    Py = Diagonal(d)
+                    y = Estimate( ytrue, Py)
+                #d  = fill(ustrip.(σn)^2,length(ytrue))
+                    #Py = MultipliableDimArrays.DiagonalDimArray(d, dims(ytrue))
+                end
             end
-            y = Estimate( ytrue, Py)
             x1 = combine(x0,y,observe)
 
             # check whether obs are reproduced
@@ -131,7 +138,7 @@
 
             # # when x₀ is a DimArray, then x̃ is a DimEstimate
             # x̃ = solve(problem) # ::DimEstimate
-            # @test within(y[1],vec((E*x̃).v)[1],3σₙ) # within 3-sigma
+            # @test within(y[1],vec((E*x̃).v)[1],3σn) # within 3-sigma
             # @test cost(x̃,problem) < 5e-2 # no noise in ob
             # @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
 
@@ -190,15 +197,15 @@
     #             #end
 
     #             # now in a position to use BLUEs to solve
-    #             σₙ = 0.01
+    #             σn = 0.01
     #             σₓ = 10.0
-    #             Cnn = Diagonal(fill(σₙ^2,length(y)),vec(unit.(y)),vec(unit.(y).^-1))
+    #             Cnn = Diagonal(fill(σn^2,length(y)),vec(unit.(y)),vec(unit.(y).^-1))
     #             Cxx = Diagonal(fill(σₓ^2,length(x₀)),vec(unit.(x₀)),vec(unit.(x₀)).^-1)
     #             problem = UnderdeterminedProblem(UnitfulMatrix(vec(y)),E,Cnn,Cxx,x₀)
 
     #             # when x₀ is a DimArray, then x̃ is a DimEstimate
     #             x̃ = solve(problem)
-    #             @test within(first(y),first(vec((E*x̃).v)),3σₙ) # within 3-sigma
+    #             @test within(first(y),first(vec((E*x̃).v)),3σn) # within 3-sigma
     #             @test cost(x̃,problem) < 1 # should think more about what a good value would be
     #             @test cost(x̃, problem) == datacost(x̃, problem) + controlcost(x̃, problem)
     #         end

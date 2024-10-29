@@ -49,36 +49,59 @@ The inputs \textbf{x} and \textbf{y} can be interchanged. The reduced uncertaint
 \subsection{Differing dimensions}
 \label{sec:differing-dimensions}
 
-Again we have two estimates, \textbf{x} and \textbf{y}, but they are not necessary of the same dimension, and instead they are related by,
+Again we have a series of estimates, $\mathbf{y}_{i}$, of a desired
+quantity, $\mathbf{x}$, and they are not necessarily of the same
+dimension. Instead they are related by,
 \begin{equation}
 \label{eq:17}
-\mathbf{y} = \mathbf{Ex} + \mathbf{n}.
+\mathbf{y}_i = \mathbf{E}_i \mathbf{x} + \mathbf{n}_i.
 \end{equation}
+Other available information is a prior estimate of \textbf{x} denoted
+$\mathbf{x}_0$ and its uncertainty $\mathbf{P}_{0}$. For each new
+piece of information, we have an estimate $\mathbf{y}_i$ and its
+uncertainty $\mathbf{P}_{i}$.
 
-\textbf{{Underdetermined formula}}
+\textbf{{Combining many estimates}}
 
-They can be combined into a new estimate, \textbf{z}:
-\begin{equation}
-\label{eq:15}
-\mathbf{z} = \mathbf{x} + \mathbf{P}_x \mathbf{E}^T (\mathbf{E} \mathbf{P}_x \mathbf{E}^T + \mathbf{P}_y )^{-1} (\mathbf{y} - \mathbf{Ex}) .
-\end{equation}
-The inputs \textbf{x} and \textbf{y} are not interchangeable. The reduced uncertainty is:
-\begin{equation}
-\label{eq:16}
-\mathbf{P}_{z} = \mathbf{P}_x - \mathbf{P}_x \mathbf{E}^T (\mathbf{E} \mathbf{P}_x \mathbf{E}^T + \mathbf{P}_y )^{-1} \mathbf{E} \mathbf{P}_x
-\end{equation}
-
-\textbf{{Overdetermined formula}}
-
+Many estimates are most easily combined with a formula derived from overdetermined least-squares problems:
 \begin{equation}
 \label{eq:18}
-\mathbf{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}^{-1}_x)^{-1} ({\bf E}^T {\bf P}_y^{-1} {\bf y} + {\bf P}_x^{-1} {\bf x}),
+\tilde{\mathbf{x}} = \left({\bf P}^{-1}_0 + \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf E} \right)^{-1} \left( {\bf P}_0^{-1} {\bf x}_{0} +  \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf y}_{i} \right),
 \end{equation}
 and the resulting uncertainty is,
 \begin{equation}
-\label{eq:19}
-{\bf P}_{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}_{x}^{-1})^{-1}.
+  \label{eq:19}
+ \tilde{\mathbf{P}}= \left({\bf P}^{-1}_0 + \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf E} \right)^{-1}
+%{\bf P}_{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}_{x}^{-1})^{-1}.
 \end{equation}
+
+\textbf{{Combining one new estimate}}
+
+Consider the case with just one new piece of information,
+$\mathbf{y}_{1}$, which can be combined with prior information,
+$\mathbf{x}_{0}$. Their relation is,
+\begin{equation}
+\mathbf{y}_1 = \mathbf{E}_1 \mathbf{x}_{0} + \mathbf{n}_1.
+\end{equation}
+They can be combined into a new estimate,
+$\tilde{\mathbf{x}}$, with either one of the next two equations:
+\begin{equation}
+\tilde{\mathbf{x}} = \left({\bf P}^{-1}_0 + {\bf E}^T_1 {\bf P}_1^{-1} {\bf E}_1 \right)^{-1} \left( {\bf P}_0^{-1} {\bf x}_{0} +  {\bf E}^T_1 {\bf P}_1^{-1} {\bf y}_1 \right),
+\end{equation}
+\begin{equation}
+\label{eq:15}
+\tilde{\mathbf{x}} = \mathbf{x}_0 + \mathbf{P}_0 \mathbf{E}^T_1 (\mathbf{E}_1 \mathbf{P}_0 \mathbf{E}^T_1 + \mathbf{P}_1 )^{-1} (\mathbf{y}_1 - \mathbf{E}_1 \mathbf{x}_0) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} are not interchangeable. The reduced uncertainty is:
+\begin{equation}
+ \tilde{\mathbf{P}}= \left({\bf P}^{-1}_0 + {\bf E}^T_1 {\bf P}_1^{-1} {\bf E}_1 \right)^{-1}
+\end{equation}
+or,
+\begin{equation}
+\label{eq:16}
+\tilde{\mathbf{P}} = \mathbf{P}_0 - \mathbf{P}_0 \mathbf{E}^T_1 (\mathbf{E}_1 \mathbf{P}_0 \mathbf{E}^T_1 + \mathbf{P}_1 )^{-1} \mathbf{E}_1 \mathbf{P}_0.
+\end{equation}
+
 
 \subsection{Functional form}
 \label{sec:functional-form}

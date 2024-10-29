@@ -5,6 +5,7 @@ using DimensionalData
 using DimensionalData:AbstractDimArray
 using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
+using AlgebraicArrays
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine

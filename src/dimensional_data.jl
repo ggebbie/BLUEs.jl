@@ -53,11 +53,13 @@ Account for proper overlap of dimension.
 Sum and take into account units.
 Return an `AbstractDimArray`
 """
-function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
-    tnow = last(first(dims(x)))
+#function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
+function convolve(x::VectorArray,E::AbstractDimArray) 
+    tnow = last(first(rangedims(x)))
     lags = first(dims(E))
     vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
-    (vals isa Number) ? (return DimArray([vals],first(dims(x)))) : (return DimArray(vals,first(dims(x))))
+    #(vals isa Number) ? (return DimArray([vals],first(dims(x)))) : (return DimArray(vals,first(dims(x))))
+    (vals isa Number) ? (return vals) : (return DimArray(vals,first(dims(x))))
 end
 """
 function convolve(x::AbstractDimArray, E::AbstractDimArray, coeffs::UnitfulMatrix}
@@ -116,14 +118,15 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     end
 end
 
-function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+function convolve(P::MatrixArray,M) 
+#function convolve(P::DimArray{T},M) where T<: AbstractDimArray
     T2 = typeof(convolve(first(P),M))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
 #        Pyx[i] = observe(P[i])
         Pyx[i] = convolve(P[i],M)
     end
-    return DimArray(Pyx,dims(P))
+    return AlgebraicArray(DimArray(Pyx,domaindims(P)))
 end
 # basically repeats previous function: any way to simplify?
 function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<: AbstractDimArray
@@ -204,12 +207,26 @@ function diagonalmatrix_with_units(x::DimArray{T}) where T<: Number
 end
 
 """
-function combine(x0::Estimate,y::Estimate,fmat::Function,fvec::Function,farg)
+    combine(x0::Estimate,y::Estimate,f::Function)
+
+# Arguments
+- `x0::Estimate`: estimate 1
+- `y::Estimate`: estimate 2
+- `f::Function`: function that relates f(x0) = y
+# Returns
+- `xtilde::Estimate`: combined estimate
+
+```math
+{\\bf E}_i (\\tau)  = 
+\\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
+```
 """
 function combine(x0::Estimate,y::Estimate,f::Function)
     # written for efficiency with underdetermined problems
-    Cyx = f(x0.P) 
-    Cxy = transpose(Cyx)
+    # Cyx = f(x0.P) 
+    # Cxy = transpose(Cyx)
+    Cxy = f(x0.P)
+    Cyx = transpose(Cxy)
     ECxy = f(Cxy)
     Cyy = ECxy + y.P
     y0 = f(x0.v)
