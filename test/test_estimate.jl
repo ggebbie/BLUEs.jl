@@ -53,8 +53,8 @@ end
             Px⁻¹ = Diagonal(fill(σₓ^-1,N))
             v = randn(N)
         end
-        local x = Estimate(v,inv(Px⁻¹))
-        local y = E*x
+        x = Estimate(v,inv(Px⁻¹))
+        y = E*x
 
         if M == N
             xtilde1 = inv(E)*y # use inv for this special repeat, repeat with left divide below
@@ -67,7 +67,7 @@ end
             end
         end
         
-        local xtilde2 = E\y
+        xtilde2 = E\y
         if  N ≤ M
             if use_units
                 @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8m)) == N 
@@ -135,7 +135,7 @@ end
 	Py⁻¹  = Diagonal([σn.^-2],[permil^-1],[permil])
 
         # "underdetermined, problem 2.1" 
-	Py  = Diagonal([σₙ.^2],[permil],[permil^-1])
+	Py  = Diagonal([σn.^2],[permil],[permil^-1])
         Px = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1])
 
     else
@@ -192,17 +192,17 @@ end
         Eparent = ustrip.(hcat(t.^0, t, t.^2, t.^3))
         E = UnitfulMatrix(Eparent,fill(g/kg,M),[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
 
-        σₙ = 0.1g/kg
-        Cₙₙ = Diagonal(fill(ustrip(σₙ^2),M),fill(g/kg,M),fill(kg/g,M)) 
-        Cₙₙ¹² = cholesky(Cₙₙ)
-        Cₙₙ⁻¹ = Diagonal(fill(ustrip(σₙ^-2),M),fill(kg/g,M),fill(g/kg,M)) 
-        Cₙₙ⁻¹² = cholesky(Cₙₙ⁻¹)
+        σy = 0.1g/kg
+        Py = Diagonal(fill(ustrip(σy^2),M),fill(g/kg,M),fill(kg/g,M)) 
+        Py¹² = cholesky(Py)
+        Py⁻¹ = Diagonal(fill(ustrip(σy^-2),M),fill(kg/g,M),fill(g/kg,M)) 
+        Py⁻¹² = cholesky(Py⁻¹)
 
         γ = [1.0e1kg^2/g^2, 1.0e2kg^2*d^2/g^2, 1.0e3kg^2*d^4/g^2, 1.0e4kg^2*d^6/g^2]
 
-        Cxx⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
+        Px⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
         #x₀ = UnitfulMatrix(zeros(N).*unitdomain(Cxx⁻¹))
-        x₀ = zeros(N).*unitdomain(Cxx⁻¹)
+        x₀ = zeros(N).*unitdomain(Px⁻¹)
     else
         t = (1:M)
         E =hcat(t.^0, t, t.^2, t.^3)
@@ -256,10 +256,10 @@ end
         τ = range(0.0yr,5.0yr,step=0.1yr)
         ρ = exp.(-τ.^2/(1yr)^2)
         n = length(ρ)
-        Cxx = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) +
+        Px = UnitfulMatrix(SymmetricToeplitz(ρ),fill(cm,n),fill(cm^-1,n),exact=true) +
             Diagonal(fill(1e-6,n),fill(cm,n),fill(cm^-1,n))
-        σₙ = 0.1cm
-        Cnn = Diagonal(fill(ustrip(σₙ),M),fill(cm,M),fill(cm^-1,M))
+        σy = 0.1cm
+        Py = Diagonal(fill(ustrip(σy),M),fill(cm,M),fill(cm^-1,M))
         Enm = sparse(1:M,1:5:n,fill(1.0,M))
         E = UnitfulMatrix(Enm,fill(cm,M),fill(cm,n))
         x₀ = zeros(n)cm
@@ -307,7 +307,7 @@ end
         E1 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N))
         E2 = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N))
         E = (one=E1,two=E2)
-        Cnn⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1))
+        Py⁻¹1 = Diagonal(fill(σₓ^-1,M),unitrange(E1).^-1,unitrange(E1))
         x = randn(N)m
     else
         E1 = randn(M,N)
