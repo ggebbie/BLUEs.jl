@@ -1,8 +1,14 @@
+# make this an extension
+function Base.:\(A::Diagonal{Quantity{Ta,Sa,Va}},
+    b::AbstractVector{Quantity{Tb,Sb,Vb}}) where {Ta,Sa,Va,Tb,Sb,Vb}
+    uA = unit(first(A))
+    return (1/uA)*( ustrip.(A)\ b )
+end
+
 function standard_error(P::UnitfulMatrix)
    sigma = .√diag(P)
    (sigma isa Vector) ? (return sigma) : (return [sigma])
 end
-
 
 function UnitfulMatrix_from_input_output(Eu,y,x)
     if length(x) == 1 && length(y) == 1
