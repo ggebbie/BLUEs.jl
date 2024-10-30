@@ -1,36 +1,39 @@
 @testset "error propagation" begin
     using Measurements
 
-    M = 5
-    if use_units
-        a = randn(M)u"K" .± rand(M)u"K"
-    else
-        a = randn(M) .± rand(M)
+    # check what happens for a scalar
+    Mlist = (1,5)
+    for M in Mlist
+        if use_units
+            a = randn(M)u"K" .± rand(M)u"K"
+        else
+            a = randn(M) .± rand(M)
+        end
+
+        E = randn(M,M)
+
+        aerr = Measurements.uncertainty.(a);
+        x = Estimate(Measurements.value.(a),
+            Diagonal(aerr.^2))
+
+        @test Measurements.value.(E*a) ≈ (E*x).v
+        @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
+
+        # combine two estimates
+        xplus = combine(x,x,alg=:underdetermined)
+        # error should decrease by 70%
+        @test sum( xplus.σ./x.σ .< 0.8) == M
+        # central estimate should not change
+        @test isapprox( xplus.v, x.v )
+
+        # combine two estimates
+        @time xplus = combine(x,x,alg=:overdetermined)
+        @time xplus = combine(x,x,alg=:underdetermined)
+        # error should decrease by 70%
+        @test sum( xplus.σ./x.σ .< 0.8) == M
+        # central estimate should not change
+        @test isapprox( xplus.v, x.v )
     end
-
-    E = randn(M,M)
-
-    aerr = Measurements.uncertainty.(a);
-    x = Estimate(Measurements.value.(a),
-        Diagonal(aerr.^2))
-
-    @test Measurements.value.(E*a) ≈ (E*x).v
-    @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
-
-    # combine two estimates
-    xplus = combine(x,x,alg=:underdetermined)
-    # error should decrease by 70%
-    @test sum( xplus.σ./x.σ .< 0.8) == M
-    # central estimate should not change
-    @test isapprox( xplus.v, x.v )
-
-    # combine two estimates
-    @time xplus = combine(x,x,alg=:overdetermined)
-    @time xplus = combine(x,x,alg=:underdetermined)
-    # error should decrease by 70%
-    @test sum( xplus.σ./x.σ .< 0.8) == M
-    # central estimate should not change
-    @test isapprox( xplus.v, x.v )
 end
 
 @testset "mixed signals: dimensionless matrix" begin

@@ -5,6 +5,7 @@ using DimensionalData
 using DimensionalData:AbstractDimArray
 using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
+using DimensionalData:@dim
 using AlgebraicArrays
 
 export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
@@ -27,9 +28,9 @@ a structure with some vector of values x and associated uncertainty matrix P
 -   `v :: AbstractArray{T, Nv}`
 -   `P :: AbstractArray{T, NP}`
 """
-struct Estimate{Tv <: Number, TP, Nv, NP} 
-    v :: AbstractArray{Tv, Nv}
-    P :: AbstractArray{TP, NP}
+struct Estimate{Tv <: Number, Ta <: Number, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
+    v :: V
+    P :: A
 end
 
 #include("dim_estimate.jl")

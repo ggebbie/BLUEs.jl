@@ -1,5 +1,8 @@
 @testset "dimensional data" begin
 
+    MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
+    VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
+
     @testset "state vectors" begin
 
         # fixed parameters
@@ -110,6 +113,13 @@
                     #Py = MultipliableDimArrays.DiagonalDimArray(d, dims(ytrue))
                 end
             end
+
+            # test pieces of combine
+            @test convolve(Px0,M) isa MatrixArray
+            @test convolve(Px0,M) isa MatrixDimArray
+            @test observe(Px0) isa MatrixArray
+            @test observe(Px0) isa MatrixDimArray
+            
             x1 = combine(x0,y,observe)
 
             # check whether obs are reproduced

@@ -1,3 +1,8 @@
+ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
+if !isnothing(ext)
+    RowVector = ext.RowVector
+end
+
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)
     statevars = x.dims[3]
@@ -123,10 +128,9 @@ function convolve(P::MatrixArray,M)
     T2 = typeof(convolve(first(P),M))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
-#        Pyx[i] = observe(P[i])
         Pyx[i] = convolve(P[i],M)
     end
-    return AlgebraicArray(DimArray(Pyx,domaindims(P)))
+    return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
 end
 # basically repeats previous function: any way to simplify?
 function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<: AbstractDimArray
@@ -221,22 +225,18 @@ end
 \\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
 ```
 """
-function combine(x0::Estimate,y::Estimate,f::Function)
+function combine(x0::Estimate,y1::Estimate,E1::Function)
     # written for efficiency with underdetermined problems
-    # Cyx = f(x0.P) 
-    # Cxy = transpose(Cyx)
-    Cxy = f(x0.P)
-    Cyx = transpose(Cxy)
-    ECxy = f(Cxy)
-    Cyy = ECxy + y.P
-    y0 = f(x0.v)
-    n = y.v - y0
-    #tmp = ldiv(Cyy, n)
-    tmp = Cyy \ n
-#    v = matmul(Cxy, tmp)
-    v = Cxy * tmp
-#    Pdecrease = matmul(Cxy,BLUEs.ldiv(Cyy,Cyx))
-    Pdecrease = Cxy * (Cyy \ Cyx)
-    P = x0.P - Pdecrease
+    Pyx = E1(x0.P) 
+    Pxy = transpose(Pyx)
+    EPxy = E1(Pxy)
+    EPxy isa Number ? Pyy = [EPxy;;] + y1.P : Pyy = EPxy + y1.P
+    #Pyy = EPxy + y1.P
+    y0 = E1(x0.v)
+    y0 isa Number ? n1 = y1.v - [y0] : n1 = y1.v - y0
+    tmp = Pyy \ n1
+    v = Pxy * tmp
+    dP = Pxy * (Pyy \ Pyx)
+    P = x0.P - dP
     return Estimate(v,P)
 end
