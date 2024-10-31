@@ -47,6 +47,7 @@ end
 #include("dim_estimate.jl")
 include("base.jl")
 include("unitful.jl")
+include("algebraic_arrays.jl")
 include("dimensional_data.jl")
 include("blockdim.jl")
 include("overdetermined_problem.jl")
