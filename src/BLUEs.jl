@@ -37,7 +37,8 @@ end
 Estimate(v::AbstractVector, sigma::AbstractVector) = Estimate(v, Diagonal(sigma.^2))
 
 # translate Vector{Measurement} to Estimate
-function Estimate(v::AbstractVector{Measurement{T}}) where T
+# let it error rather than restricting types at compile-time
+function Estimate(v::AbstractVector{T}) where T 
         vval = Measurements.value.(v)
         verr = Measurements.uncertainty.(v);
         return Estimate(vval, verr) # just provide standard error
