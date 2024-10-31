@@ -16,9 +16,12 @@
         x0 = Estimate(Measurements.value.(a),
             Diagonal(aerr.^2))
         x  = Estimate(aval, aerr) # just provide standard error
+        x1  = Estimate(a) # just provide Vector{Measurement}
 
         @test   isequal(x.v, x0.v)
         @test   isequal(x.P, x0.P)
+        @test   isequal(x1.v, x0.v)
+        @test   isequal(x1.P, x0.P)
         @test Measurements.value.(E*a) ≈ (E*x).v
         @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
 

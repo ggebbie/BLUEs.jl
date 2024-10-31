@@ -36,6 +36,13 @@ end
 # if two vectors are provided, assume it is the standard error 
 Estimate(v::AbstractVector, sigma::AbstractVector) = Estimate(v, Diagonal(sigma.^2))
 
+# translate Vector{Measurement} to Estimate
+function Estimate(v::AbstractVector{Measurement{T}}) where T
+        vval = Measurements.value.(v)
+        verr = Measurements.uncertainty.(v);
+        return Estimate(vval, verr) # just provide standard error
+end 
+
 #include("dim_estimate.jl")
 include("base.jl")
 include("unitful.jl")
