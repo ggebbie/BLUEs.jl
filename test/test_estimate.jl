@@ -11,11 +11,14 @@
         end
 
         E = randn(M,M)
-
+        aval = Measurements.value.(a)
         aerr = Measurements.uncertainty.(a);
-        x = Estimate(Measurements.value.(a),
+        x0 = Estimate(Measurements.value.(a),
             Diagonal(aerr.^2))
+        x  = Estimate(aval, aerr) # just provide standard error
 
+        @test   isequal(x.v, x0.v)
+        @test   isequal(x.P, x0.P)
         @test Measurements.value.(E*a) ≈ (E*x).v
         @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
 
@@ -26,13 +29,12 @@
         # central estimate should not change
         @test isapprox( xplus.v, x.v )
 
-        # combine two estimates
-        @time xplus = combine(x,x,alg=:overdetermined)
-        @time xplus = combine(x,x,alg=:underdetermined)
+        # combine two estimates another way
+        xplus2 = combine(x,x,alg=:overdetermined)
         # error should decrease by 70%
-        @test sum( xplus.σ./x.σ .< 0.8) == M
+        @test sum( xplus2.σ./x.σ .< 0.8) == M
         # central estimate should not change
-        @test isapprox( xplus.v, x.v )
+        @test isapprox( xplus2.v, x.v )
     end
 end
 

@@ -33,6 +33,9 @@ struct Estimate{Tv <: Number, Ta <: Number, V <: AbstractArray{Tv,1}, A <: Abstr
     P :: A
 end
 
+# if two vectors are provided, assume it is the standard error 
+Estimate(v::AbstractVector, sigma::AbstractVector) = Estimate(v, Diagonal(sigma.^2))
+
 #include("dim_estimate.jl")
 include("base.jl")
 include("unitful.jl")

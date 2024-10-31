@@ -23,6 +23,7 @@ includet("test_functions.jl")
     @testset "without units" begin 
         global use_units = false
         include("test_estimate.jl")
+        #include("test_algebraic_arrays.jl")
         #include("test_dimensional_data.jl")
     end
 
