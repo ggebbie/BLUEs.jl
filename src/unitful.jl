@@ -1,4 +1,5 @@
 # make this an extension
+
 function Base.:\(A::Diagonal{Quantity{Ta,Sa,Va}},
     b::AbstractVector{Quantity{Tb,Sb,Vb}}) where {Ta,Sa,Va,Tb,Sb,Vb}
     uA = unit(first(A))

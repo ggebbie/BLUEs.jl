@@ -38,7 +38,7 @@ Estimate(v::AbstractVector, sigma::AbstractVector) = Estimate(v, Diagonal(sigma.
 
 # translate Vector{Measurement} to Estimate
 # let it error rather than restricting types at compile-time
-function Estimate(v::AbstractVector{T}) where T 
+function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity{<:Measurement}} 
         vval = Measurements.value.(v)
         verr = Measurements.uncertainty.(v);
         return Estimate(vval, verr) # just provide standard error
@@ -48,6 +48,7 @@ end
 include("base.jl")
 include("unitful.jl")
 include("algebraic_arrays.jl")
+include("unitful_algebraic_arrays.jl")
 include("dimensional_data.jl")
 include("blockdim.jl")
 include("overdetermined_problem.jl")
