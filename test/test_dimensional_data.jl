@@ -108,7 +108,8 @@
 
             # test pieces of combine
             @test observe(Px0) isa MatrixArray
-            @test observe(Px0) isa MatrixDimArray
+            @test observe(Px0) isa MatrixDimArray 
+            @test parent(observe(Px0)) isa DimArray # workaround
             
             x1 = combine(x0,y,observe)
 

@@ -58,7 +58,6 @@ Account for proper overlap of dimension.
 Sum and take into account units.
 Return an `AbstractDimArray`
 """
-#function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
 function convolve(x::VectorArray,E::AbstractDimArray) 
     tnow = last(first(rangedims(x)))
     lags = first(dims(E))
@@ -73,15 +72,15 @@ function convolve(x::AbstractDimArray, E::AbstractDimArray, coeffs::UnitfulMatri
 
     this function both convolves, and linearly combines the propagated state variables
 """
-function convolve(x::AbstractDimArray,E::AbstractDimArray, coeffs::UnitfulMatrix)
-    statevars = x.dims[3]
-    mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E) for s in statevars])) * coeffs
-    return getindexqty(mat, 1,1)
-end
+# function convolve(x::AbstractDimArray,E::AbstractDimArray, coeffs::UnitfulMatrix)
+#     statevars = x.dims[3]
+#     mat = UnitfulMatrix(transpose([convolve(x[:,:,At(s)], E) for s in statevars])) * coeffs
+#     return getindexqty(mat, 1,1)
+# end
 
-function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
-    lags = first(dims(E))
-    return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+function convolve(x::VectorArray, M::AbstractDimArray, t::Number)
+    lags = first(dims(M))
+    return sum([M[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
 end
 
 #coeffs signifies that x is 3D 
@@ -92,7 +91,7 @@ function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::U
 end
 
 #don't handle the ndims(M) == 3 case here but I'll get back to it
-function convolve(x::AbstractDimArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, coeffs::UnitfulMatrix)
+function convolve(x::VectorArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, coeffs::UnitfulMatrix)
     if ndims(M) == 2
         return DimArray([convolve(x,M,Tx[tt], coeffs) for (tt, yy) in enumerate(Tx)], Tx)
     elseif ndims(M) == 3
@@ -133,8 +132,6 @@ function convolve(P::MatrixArray,M)
         #Pyx[i] = convolve(P[i],M)
         Pyx[i] = first(parent(convolve(P[i],M)))
     end
-    println(Pyx)
-    println(size(Pyx))
     return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
 end
 
@@ -160,9 +157,9 @@ function convolve(x::VectorArray, M::AbstractDimArray, coeffs::DimVector)
     (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
 end
 
-function convolve(x::DimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T <: Number
+function convolve(x::VectorArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T <: Number
     if ndims(M) == 2
-        return DimArray([convolve(x, M, Tx[tt], coeffs) for tt in eachindex(Tx)], Tx)
+        return VectorArray(DimArray([convolve(x, M, Tx[tt], coeffs) for tt in eachindex(Tx)], Tx))
     elseif ndims(M) == 3
         error("some code should go here")
     else
@@ -170,57 +167,56 @@ function convolve(x::DimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector
     end
 end
 # basically repeats previous function: any way to simplify?
-function convolve(P::DimArray{T},M::AbstractDimArray,Tx::Ti, coeffs::DimVector) where T<: AbstractDimArray
-    T2 = typeof(convolve(first(P),M,Tx,coeffs))
+function convolve(P::MatrixArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) 
+    #T2 = typeof(convolve(first(P),M,Tx,coeffs))
+    #T2 = typeof(first(parent(convolve(first(P),M,Tx,coeffs))))
+    #T2 = typeof(parent(parent(convolve(first(P),M,Tx,coeffs))))
+    T2 = typeof(parent(convolve(first(P),M,Tx,coeffs)))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
-        Pyx[i] = convolve(P[i],M,Tx,coeffs)
+        #Pyx[i] = parent(parent(convolve(P[i],M,Tx,coeffs)))
+        Pyx[i] = parent(convolve(P[i],M,Tx,coeffs))
     end
-    return DimArray(Pyx,dims(P))
+    return MatrixArray(DimArray(Pyx,domaindims(P)))
 end
 
-function convolve(x::AbstractDimArray, E::AbstractDimArray, t::Number, coeffs::DimVector)
+function convolve(x::VectorArray, M::AbstractDimArray, t::Number, coeffs::DimVector)
     statevars = dims(x,3)
-    return sum([convolve(x[:,:,At(s)], E, t) * coeffs[At(s)] for s in statevars])
+    return sum([convolve(x[:,:,At(s)], M, t)  * coeffs[At(s)] for s in statevars])
 end
 
-# function convolve(x::AbstractDimArray,E::AbstractDimArray,t::Number)
-#     lags = first(dims(E))
-#     return sum([E[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+# function uncertainty_units(x::DimArray{T}) where T<: Number
+
+#     unitlist = unit.(x)
+#     U = Array{typeof(unitlist)}(undef,size(unitlist))
+
+#     for i in eachindex(U)
+#         U[i] = similar(unitlist)# Array{typeof(unitlist)}(undef,size(unitlist))
+#         for j in eachindex(U)
+#             U[i][j] = unitlist[i]*unitlist[j]
+#         end
+#     end
+#     return DimArray(U,dims(x))
 # end
 
-function uncertainty_units(x::DimArray{T}) where T<: Number
+# function diagonalmatrix_with_units(x::DimArray{T}) where T<: Number
 
-    unitlist = unit.(x)
-    U = Array{typeof(unitlist)}(undef,size(unitlist))
+#     unitlist = 1.0.*unit.(x)
+#     U = Array{typeof(unitlist)}(undef,size(unitlist))
 
-    for i in eachindex(U)
-        U[i] = similar(unitlist)# Array{typeof(unitlist)}(undef,size(unitlist))
-        for j in eachindex(U)
-            U[i][j] = unitlist[i]*unitlist[j]
-        end
-    end
-    return DimArray(U,dims(x))
-end
-
-function diagonalmatrix_with_units(x::DimArray{T}) where T<: Number
-
-    unitlist = 1.0.*unit.(x)
-    U = Array{typeof(unitlist)}(undef,size(unitlist))
-
-    for i in eachindex(U)
-        U[i] = similar(unitlist)
-        #U[i] = Array{Quantity}(undef,size(unitlist))
-        for j in eachindex(U)
-            if i == j 
-                U[i][j] = unitlist[i]*unitlist[j]
-            else
-                U[i][j] = 0.0.*unitlist[i]*unitlist[j]
-            end
-        end
-    end
-    return DimArray(U,dims(x))
-end
+#     for i in eachindex(U)
+#         U[i] = similar(unitlist)
+#         #U[i] = Array{Quantity}(undef,size(unitlist))
+#         for j in eachindex(U)
+#             if i == j 
+#                 U[i][j] = unitlist[i]*unitlist[j]
+#             else
+#                 U[i][j] = 0.0.*unitlist[i]*unitlist[j]
+#             end
+#         end
+#     end
+#     return DimArray(U,dims(x))
+# end
 
 """
     combine(x0::Estimate,y::Estimate,f::Function)
