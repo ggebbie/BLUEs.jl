@@ -64,7 +64,8 @@ function convolve(x::VectorArray,E::AbstractDimArray)
     lags = first(dims(E))
     vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
     #(vals isa Number) ? (return DimArray([vals],first(dims(x)))) : (return DimArray(vals,first(dims(x))))
-    (vals isa Number) ? (return vals) : (return DimArray(vals,first(dims(x))))
+    #(vals isa Number) ? (return vals) : (return DimArray(vals,first(dims(x))))
+    (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
 end
 """
 function convolve(x::AbstractDimArray, E::AbstractDimArray, coeffs::UnitfulMatrix}
@@ -124,21 +125,26 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
 end
 
 function convolve(P::MatrixArray,M) 
-#function convolve(P::DimArray{T},M) where T<: AbstractDimArray
-    T2 = typeof(convolve(first(P),M))
+    #function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+    # became more complicated when returning a scalar was not allowed
+    T2 = typeof(first(parent(convolve(first(P),M))))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
-        Pyx[i] = convolve(P[i],M)
+        #Pyx[i] = convolve(P[i],M)
+        Pyx[i] = first(parent(convolve(P[i],M)))
     end
     return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
 end
+
 # basically repeats previous function: any way to simplify?
 function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<: AbstractDimArray
-    T2 = typeof(convolve(first(P),M,coeffs))
+    T2 = typeof(first(parent(convolve(first(P),M,coeffs))))
+    #T2 = typeof(convolve(first(P),M,coeffs))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
 #        Pyx[i] = observe(P[i])
-        Pyx[i] = convolve(P[i],M,coeffs)
+#        Pyx[i] = convolve(P[i],M,coeffs)
+        Pyx[i] = first(parent(convolve(P[i],M,coeffs)))
     end
     return DimArray(Pyx,dims(P))
 end
@@ -230,13 +236,12 @@ function combine(x0::Estimate,y1::Estimate,E1::Function)
     Pyx = E1(x0.P) 
     Pxy = transpose(Pyx)
     EPxy = E1(Pxy)
-    EPxy isa Number ? Pyy = [EPxy;;] + y1.P : Pyy = EPxy + y1.P
-    #Pyy = EPxy + y1.P
+    Py = EPxy + y1.P
     y0 = E1(x0.v)
-    y0 isa Number ? n1 = y1.v - [y0] : n1 = y1.v - y0
-    tmp = Pyy \ n1
+    n1 = y1.v - y0
+    tmp = Py \ n1
     v = Pxy * tmp
-    dP = Pxy * (Pyy \ Pyx)
+    dP = Pxy * (Py \ Pyx)
     P = x0.P - dP
     return Estimate(v,P)
 end
