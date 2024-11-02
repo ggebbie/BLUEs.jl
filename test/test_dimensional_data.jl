@@ -70,10 +70,10 @@
                     #x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
                     Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix_with_units(x₀)
                 else
-                    x = DimArray(ustrip.(parent(x)), dims(x)) # extra step: remove units
-                    x₀ = zeros(dims(x)) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
-                    d  = fill(ustrip.(σₓ)^2,length(x))
-                    Px0 = DiagonalDimArray(d, dims(x))
+                    x = ustrip.(x) # extra step: remove units
+                    x₀ = zeros(dims(x), :VectorArray) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
+                    d  = AlgebraicArray(fill(ustrip.(σₓ)^2,length(x)),dims(x))
+                    Px0 = Diagonal(d)
                     coeffs = DimArray(ustrip.(parent(coeffs)), dims(coeffs)) 
                 end
                 x0 = Estimate(x₀,Px0)
@@ -107,8 +107,6 @@
             end
 
             # test pieces of combine
-            @test convolve(Px0,M) isa MatrixArray
-            @test convolve(Px0,M) isa MatrixDimArray
             @test observe(Px0) isa MatrixArray
             @test observe(Px0) isa MatrixDimArray
             

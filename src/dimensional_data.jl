@@ -133,25 +133,31 @@ function convolve(P::MatrixArray,M)
         #Pyx[i] = convolve(P[i],M)
         Pyx[i] = first(parent(convolve(P[i],M)))
     end
+    println(Pyx)
+    println(size(Pyx))
     return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
 end
 
 # basically repeats previous function: any way to simplify?
-function convolve(P::DimArray{T},M::AbstractDimArray,coeffs::DimVector) where T<: AbstractDimArray
+function convolve(P::MatrixArray,M::AbstractDimArray,coeffs::DimVector)
     T2 = typeof(first(parent(convolve(first(P),M,coeffs))))
     #T2 = typeof(convolve(first(P),M,coeffs))
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
-#        Pyx[i] = observe(P[i])
-#        Pyx[i] = convolve(P[i],M,coeffs)
+        #        Pyx[i] = convolve(P[i],M,coeffs)
         Pyx[i] = first(parent(convolve(P[i],M,coeffs)))
     end
-    return DimArray(Pyx,dims(P))
+    #return DimArray(Pyx,dims(P))
+    return transpose(VectorArray(DimArray(Pyx,rangedims(P))))
+    #return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
+    #return MatrixArray(DimArray(Pyx,(RowVector(["1"]),rangedims(P))))
 end
 
-function convolve(x::DimArray{T}, M::AbstractDimArray, coeffs::DimVector) where T <: Number
-    statevars = dims(x,3)
-    return sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+function convolve(x::VectorArray, M::AbstractDimArray, coeffs::DimVector) 
+    statevars = dims(x,3) # equal to rangedims(x)[3]
+    vals = sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+    #return sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+    (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
 end
 
 function convolve(x::DimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T <: Number
