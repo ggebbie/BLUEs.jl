@@ -26,6 +26,47 @@
         @test cost(x̃1,problem) < 3M # rough guide, could get unlucky and not pass
     end
 
+    @testset "left-uniform problem with prior info" begin
+	#y = UnitfulMatrix([-1.9permil])
+	y = -1.9permil
+	σy = 0.2permil
+	a = -0.24permil*K^-1
+	γδ = 1.0permil^-2 # to keep units correct, have two γ (tapering) variables
+	γT = 1.0K^-2
+        E = UnitfulMatrix(ustrip.([1 a]),[permil],[permil,K],exact=true) # problem with exact E and error propagation
+        #x₀ = UnitfulMatrix([-1.0permil, 4.0K])
+        x₀ = [-1.0permil, 4.0K]
+
+        # "overdetermined, problem 1.4" 
+        Px⁻¹ = Diagonal(ustrip.([γδ,γT]),[permil^-1,K^-1],[permil,K])
+	Py⁻¹  = Diagonal([σy.^-2],[permil^-1],[permil])
+
+	Py  = Diagonal([σy.^2],[permil],[permil^-1])
+        Px = Diagonal(ustrip.([γδ,γT].^-1),[permil,K],[permil^-1,K^-1])
+
+        # Px = inv(Px⁻¹)
+        # Py = inv(Py⁻¹)
+
+        y1 = Estimate([y],Py)
+        x0 = Estimate(x₀,Px)
+
+        x1 = combine(x0,y1,E)
+        
+        oproblem = OverdeterminedProblem([y],E,Py⁻¹,Px⁻¹,x₀)
+        xo = solve(oproblem)
+        @test cost(xo,oproblem) < 1 # rough guide, coul
+        @test cost(x1,oproblem) < 1 # rough guide, coul
+
+        # "underdetermined, problem 2.1" 
+        uproblem = UnderdeterminedProblem([y],E,Py,Px,x₀)
+        xu = solve(uproblem)
+        @test cost(xu,uproblem) < 1 # rough guide, could ge
+
+        # same answer all three ways?
+        @test cost(xu,uproblem) ≈ cost(xo,oproblem)
+        @test cost(x1,uproblem) ≈ cost(xo,oproblem)
+    end
+
     @testset "objective mapping, problem 4.3" begin
         M = 11
         if use_units
