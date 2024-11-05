@@ -157,7 +157,7 @@ function convolve(x::VectorArray, M::AbstractDimArray, coeffs::DimVector)
     (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
 end
 
-function convolve(x::VectorArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T <: Number
+function convolve(x::VectorArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) # where T <: Number
     if ndims(M) == 2
         return VectorArray(DimArray([convolve(x, M, Tx[tt], coeffs) for tt in eachindex(Tx)], Tx))
     elseif ndims(M) == 3
