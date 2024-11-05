@@ -67,6 +67,51 @@
         @test cost(x1,uproblem) ≈ cost(xo,oproblem)
     end
 
+    @testset "polynomial fitting, problem 2.3" begin
+        g = u"g"
+        kg = u"kg"
+        d = u"d"
+	M = 50
+        t = (1:M)d
+        Eparent = ustrip.(hcat(t.^0, t, t.^2, t.^3))
+        E = UnitfulMatrix(Eparent,fill(g/kg,M),[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3],exact=true)
+
+        σy = 0.1g/kg
+        Py = Diagonal(fill(ustrip(σy^2),M),fill(g/kg,M),fill(kg/g,M)) 
+        Py¹² = cholesky(Py)
+        Py⁻¹ = Diagonal(fill(ustrip(σy^-2),M),fill(kg/g,M),fill(g/kg,M)) 
+        Py⁻¹² = cholesky(Py⁻¹)
+
+	γ = [1.0e1kg^2/g^2, 1.0e2kg^2*d^2/g^2, 1.0e3kg^2*d^4/g^2, 1.0e4kg^2*d^6/g^2]
+
+	Px⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
+        Px = inv(Px⁻¹)
+        Px¹² = cholesky(Px)
+
+        N = size(Px⁻¹,1)
+        #x₀ = UnitfulMatrix(zeros(N).*unitdomain(Px⁻¹))
+        x₀ = zeros(N).*unitdomain(Px⁻¹)
+        x = Px¹².L*randn(N)
+        y = E*x
+
+        x0 = Estimate(x₀,Px)
+        y1 = Estimate(y,Py)
+        x1 = combine(x0,y1,E)
+
+        oproblem = OverdeterminedProblem(y,E,Py⁻¹,Px⁻¹,x₀)
+
+        # not perfect data fit b.c. of prior info
+        x2 = solve(oproblem,alg=:hessian)
+        x3 = solve(oproblem,alg=:textbook)
+        @test cost(x1,oproblem) < 3M
+        @test cost(x2,oproblem) < 3M
+        @test cost(x3,oproblem) < 3M
+
+        # same answer all three ways?
+        @test cost(x1,oproblem) ≈ cost(x2,oproblem)
+        @test cost(x2,oproblem) ≈ cost(x3,oproblem)
+    end
+
     @testset "objective mapping, problem 4.3" begin
         M = 11
         if use_units
