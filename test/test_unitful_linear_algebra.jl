@@ -8,16 +8,22 @@
         a = randn()m # intercept
         b = randn()m/s # slope
 
-        y = UnitfulMatrix(a .+ b.*t .+ randn(M)m)
+        #y = UnitfulMatrix(a .+ b.*t .+ randn(M)m)
+        y = a .+ b.*t .+ randn(M)m
 
         E = UnitfulMatrix(hcat(ones(M),ustrip.(t)),fill(m,M),[m,m/s],exact=true)
-        Cnn⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M))
+        Py⁻¹ = Diagonal(fill(1.0,M),fill(m^-1,M),fill(m,M))
+        Py = Diagonal(fill(1.0,M),fill(m,M),fill(m^-1,M))
 
-        problem = OverdeterminedProblem(y,E,Cnn⁻¹)
+        y1 = Estimate(y,Py)
+        x̃0 = E \ y1 # no information to combine, simply translate
+        
+        problem = OverdeterminedProblem(y,E,Py⁻¹)
         x̃ = solve(problem,alg=:textbook)
         x̃1 = solve(problem,alg=:hessian)
+        @test cost(x̃0,problem) < 3M # rough guide, could get unlucky and not pass
         @test cost(x̃,problem) < 3M # rough guide, could get unlucky and not pass
-
+        @test cost(x̃1,problem) < 3M # rough guide, could get unlucky and not pass
     end
 
     @testset "objective mapping, problem 4.3" begin
