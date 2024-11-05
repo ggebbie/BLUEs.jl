@@ -141,8 +141,8 @@
         x = Px¹².L*randn(n)
         y = E*x
         x0 = Estimate(x₀, Px)
-        y_estimate = Estimate(y, Py)
-        x1 = combine(x0, y_estimate, E) # a BLUE
+        y1 = Estimate(y, Py)
+        x1 = combine(x0, y1, E) # a BLUE
     
         uproblem = UnderdeterminedProblem(y,E,Py,Px,x₀)
         x̃ = solve(uproblem)
