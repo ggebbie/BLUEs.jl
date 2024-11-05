@@ -18,8 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.10'
-          - 'nightly'
+          - '1.11'
+          - 'pre'
         os:
           - ubuntu-latest
         arch:
@@ -54,6 +54,10 @@ jobs:
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
       - run: |
           julia --project=docs -e '
+                    using Pkg
+                    Pkg.add(url="https://github.com/ggebbie/AlgebraicArrays.jl.git")
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
             using Documenter: DocMeta, doctest
             using BLUEs
             DocMeta.setdocmeta!(BLUEs, :DocTestSetup, :(using BLUEs); recursive=true)
