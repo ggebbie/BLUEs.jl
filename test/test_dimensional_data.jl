@@ -22,6 +22,7 @@
         # 2) timeseries of obs
         # 3) Circulation with lag
 
+        # define (statevars,timeseries,lag)
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
         #        (statevars,timeseries,lag) = cases[2] # for interactive use
@@ -74,7 +75,7 @@
                     x₀ = zeros(dims(x), :VectorArray) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
                     d  = AlgebraicArray(fill(ustrip.(σₓ)^2,length(x)),dims(x))
                     Px0 = Diagonal(d)
-                    coeffs = DimArray(ustrip.(parent(coeffs)), dims(coeffs)) 
+                    coeffs = ustrip.(coeffs)
                 end
                 x0 = Estimate(x₀,Px0)
             else

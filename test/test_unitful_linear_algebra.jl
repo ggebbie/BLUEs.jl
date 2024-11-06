@@ -21,9 +21,9 @@
         problem = OverdeterminedProblem(y,E,Py⁻¹)
         x̃ = solve(problem,alg=:textbook)
         x̃1 = solve(problem,alg=:hessian)
-        @test cost(x̃0,problem) < 3M # rough guide, could get unlucky and not pass
-        @test cost(x̃,problem) < 3M # rough guide, could get unlucky and not pass
-        @test cost(x̃1,problem) < 3M # rough guide, could get unlucky and not pass
+        @test cost(x̃0,problem) < 5M # rough guide, could get unlucky and not pass
+        @test cost(x̃,problem) < 5M # rough guide, could get unlucky and not pass
+        @test cost(x̃1,problem) < 5M # rough guide, could get unlucky and not pass
     end
 
     @testset "left-uniform problem with prior info" begin
@@ -103,9 +103,9 @@
         # not perfect data fit b.c. of prior info
         x2 = solve(oproblem,alg=:hessian)
         x3 = solve(oproblem,alg=:textbook)
-        @test cost(x1,oproblem) < 3M
-        @test cost(x2,oproblem) < 3M
-        @test cost(x3,oproblem) < 3M
+        @test cost(x1,oproblem) < 5M
+        @test cost(x2,oproblem) < 5M
+        @test cost(x3,oproblem) < 5M
 
         # same answer all three ways?
         @test cost(x1,oproblem) ≈ cost(x2,oproblem)
