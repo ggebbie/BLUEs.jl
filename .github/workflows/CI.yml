@@ -59,7 +59,7 @@ jobs:
         shell: julia --project=docs --color=yes {0}
         run: |
           using Pkg
-          Pkg.develop(PackageSpec(path=joinpath(pwd(),"..")) # get main BLUEs package
+          Pkg.develop(PackageSpec(path=joinpath(pwd(),".."))) # get main BLUEs package
           Pkg.add(url="https://github.com/ggebbie/AlgebraicArrays.jl.git")
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
