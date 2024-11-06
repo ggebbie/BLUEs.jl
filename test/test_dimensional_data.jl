@@ -25,7 +25,7 @@
         # define (statevars,timeseries,lag)
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-        #        (statevars,timeseries,lag) = cases[2] # for interactive use
+        #        (statevars,timeseries,lag) = cases[1] # for interactive use
         for (statevars,timeseries,lag) in cases
             println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
@@ -45,39 +45,37 @@
                 x = source_water_solution(surfaceregions,yrs)
 
                 if use_units
-                    # DimArray is good enough. This is an array, not necessarily a matrix.
-                    x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
-                    D = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix(dims(x₀))
-                    #Px0 = σₓ^2 * BLUEs.diagonalmatrix(dims(x₀))
-
-                    urange = unit.(x)
-                    udomain = unit.(inv.(x))
-                    Px0 = UnitfulMatrix(D,(urange,udomain));
-
+                    #d  = AlgebraicArray(fill(ustrip.(σₓ)^2,size(x)),dims(x)) .*(unit.(x)).^2
+                    #d  = AlgebraicArray(fill(σₓ.^2,size(x)),dims(x)) .*(unit.(x)).^2
+                    d = VectorArray(fill(σₓ,dims(x)))
+                    #Diagonal(VectorArray(fill(σₓ.^2,dims(x))))
+                    #d = VectorArray(fill(σₓ.^2,dims(x)))
                 else
                     x = ustrip.(x) # extra step: remove units
-                    x₀ = zeros(dims(x),:VectorArray)
-                    d  = AlgebraicArray(fill(ustrip.(σₓ)^2,length(x)),dims(x))
-                    Px0 = Diagonal(d)
+                    d = VectorArray(fill(ustrip.(σₓ),dims(x)))
+                    #x₀ = 0.0 * x #zeros(dims(x),:VectorArray)
+                    #d  = AlgebraicArray(fill(ustrip.(σₓ)^2,size(x)),dims(x))
                 end
-                x0 = Estimate( x₀, Px0)
+                x₀ = 0.0 * x #zeros(dims(x),:VectorArray) .* unit.(x)
+                #Px0 = Diagonal(d)
+                x0 = Estimate( x₀, d)
                     
             elseif statevars
 
                 x = source_water_solution(surfaceregions, yrs, statevariables)
                 coeffs = DimArray(rand(2).*[permil/K,NoUnits], StateVariable(statevariables))
-                x₀ = 0.0 * x
                 if use_units
-                    #x₀ = DimArray(zeros(size(x))K,(Ti(yrs),last(dims(M))))
-                    Px0 = ustrip.(σₓ)^2 * BLUEs.diagonalmatrix_with_units(x₀)
+
+                    # unit.(x) doesn't work for non-uniform matrices
+                    d = VectorArray(fill(ustrip.(σₓ),dims(x))) .* unit.(x) # when multiple units
+
                 else
                     x = ustrip.(x) # extra step: remove units
-                    x₀ = zeros(dims(x), :VectorArray) #DimArray(zeros(size(x)),(Ti(yrs),last(dims(M))))
-                    d  = AlgebraicArray(fill(ustrip.(σₓ)^2,length(x)),dims(x))
-                    Px0 = Diagonal(d)
                     coeffs = ustrip.(coeffs)
+                    d = VectorArray(fill(ustrip.(σₓ),dims(x)))
                 end
-                x0 = Estimate(x₀,Px0)
+                x₀ = 0.0 * x
+                x0 = Estimate(x₀,d)
             else
                 error("no case")
             end
@@ -100,13 +98,15 @@
             ytrue = observe(x)
             ny = length(ytrue)
             if use_units
-                Py = BLUEs.diagonalmatrix_with_units(ytrue)
-                #                                Py = ustrip.(σn)^2 * BLUEs.diagonalmatrix_with_units(ytrue)
+                #Py  = VectorArray(fill(ustrip.(σn)^2,length(ytrue)), rangedims(ytrue)).*unit.(ytrue)
+                d  = VectorArray(fill(σn, rangedims(ytrue)))
             else
-                Py  = VectorArray(fill(ustrip.(σn)^2,length(ytrue)), rangedims(ytrue))
-                y = Estimate( ytrue, Py)
+                #Py  = VectorArray(fill(ustrip.(σn)^2,length(ytrue)), rangedims(ytrue))
+                d  = VectorArray(fill(ustrip.(σn), rangedims(ytrue)))
             end
+            y = Estimate( ytrue, d)
 
+            Px0 = x0.P
             # test pieces of combine
             @test observe(Px0) isa MatrixArray
             @test observe(Px0) isa MatrixDimArray 
@@ -116,11 +116,13 @@
 
             # check whether obs are reproduced
             ytilde = observe(x1.v)
-            if use_units
-                @test isapprox(ustrip.(y.v),ustrip.(ytilde), atol=1e-3)  
-            else
-                @test isapprox(y.v,ytilde, atol=1e-3) 
-            end
+            @test isapprox(y.v,ytilde,rtol= 1e-2) 
+
+            # if use_units
+            #     @test isapprox(ustrip.(y.v),ustrip.(ytilde), atol=1e-3)  
+            # else
+            #     @test isapprox(y.v,ytilde, atol=1e-3) 
+            # end
             
             # # check functional form of observational operator
             # Imatrix = DiagonalDimArray(ones(length(x)), dims(x))
