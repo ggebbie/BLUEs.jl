@@ -31,8 +31,8 @@ includet("test_functions.jl")
         global use_units = true
         include("test_estimate.jl")
         include("test_algebraic_arrays.jl")
-        #include("test_dimensional_data.jl") ## next step: HERE
-        include("test_unitful_linear_algebra.jl")
+        include("test_dimensional_data.jl") ## next step: HERE
+        #include("test_unitful_linear_algebra.jl")
     end
 
 end
