@@ -50,9 +50,10 @@ function convolve(x::VectorArray, M::AbstractDimArray, Tx::Union{Ti, Vector}, co
     end
 end
 
-function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+#function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+function convolve(x::VectorArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     if ndims(M) == 2 
-        return DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx)
+        return VectorArray(DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx))
     elseif ndims(M) == 3
 
         # do a sample calculation to get units.
@@ -70,6 +71,16 @@ function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     else
         error("M has wrong number of dims")
     end
+end
+# basically repeats previous function: any way to simplify?
+function convolve(P::MatrixArray, M::AbstractDimArray, Tx::Union{Ti,Vector}) 
+    T2 = typeof(parent(convolve(first(P),M,Tx)))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        #Pyx[i] = parent(parent(convolve(P[i],M,Tx,coeffs)))
+        Pyx[i] = parent(convolve(P[i],M,Tx))
+    end
+    return MatrixArray(DimArray(Pyx,domaindims(P)))
 end
 
 function convolve(P::MatrixArray,M) 
