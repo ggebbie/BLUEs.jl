@@ -32,7 +32,9 @@ version = "4.1.0"
 
 [[deps.AlgebraicArrays]]
 deps = ["LinearAlgebra", "Revise"]
-path = "/home/gebbie/projects/AlgebraicArrays.jl/"
+git-tree-sha1 = "1861960eb2845e1d8221b3054d4c5a47d9a47ab4"
+repo-rev = "main"
+repo-url = "https://github.com/ggebbie/AlgebraicArrays.jl"
 uuid = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 version = "1.0.5-DEV"
 weakdeps = ["DimensionalData", "Unitful"]
