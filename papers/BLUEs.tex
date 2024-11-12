@@ -1,0 +1,268 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{indentfirst}
+\usepackage[portrait, margin = 1in]{geometry}
+\usepackage{graphicx}
+\usepackage{scicite}
+\usepackage{textcomp}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\title{\texttt{BLUEs.jl}: Best Linear Unbiased Estimators for Julia}
+\author{Brynnydd Hamilton, Jake Gebbie}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section{\texttt{combine} function}
+
+\subsection{Combination of estimates of same dimension}
+\label{sec:basic-form}
+
+Consider a case where there are $N$ estimates, $\mathbf{x}_i$ for
+$i = 1 \rightarrow N$, of the same dimension are combined into a new estimate,
+$\tilde{\mathbf{x}}$.
+
+\textbf{{Many estimates}}
+
+Use a formula derived from overdetermined least-squares problems to combine estimates:
+\begin{equation}
+\label{eq:18}
+\tilde{\mathbf{x}} = \left(\sum_{i=1}^N {\bf P}_i^{-1}\right)^{-1} {\bf P}_i^{-1} {\bf x}_i,
+\end{equation}
+and the resulting uncertainty is,
+\begin{equation}
+\label{eq:19}
+\tilde{{\bf P}} = \left(\sum_{i=1}^N{\bf P}_i^{-1}\right)^{-1}
+\end{equation}
+
+
+\textbf{{Two estimates}}
+
+The underdetermined formula is easiest to derive for two estimates, \textbf{x}$_1$ and \textbf{x}$_2$:
+\begin{equation}
+\label{eq:15}
+\tilde{\mathbf{x}} = \mathbf{x}_{1} + \mathbf{P}_1 (\mathbf{P}_1 + \mathbf{P}_2 )^{-1} (\mathbf{x}_2 - \mathbf{x}_1) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} can be interchanged. The reduced uncertainty is:
+\begin{equation}
+\label{eq:16}
+\tilde{\mathbf{P}} = \mathbf{P}_1 - \mathbf{P}_1 (\mathbf{P}_1 + \mathbf{P}_2 )^{-1} \mathbf{P}_1.
+\end{equation}
+
+\subsection{Differing dimensions}
+\label{sec:differing-dimensions}
+
+Again we have a series of estimates, $\mathbf{y}_{i}$, of a desired
+quantity, $\mathbf{x}$, and they are not necessarily of the same
+dimension. Instead they are related by,
+\begin{equation}
+\label{eq:17}
+\mathbf{y}_i = \mathbf{E}_i \mathbf{x} + \mathbf{n}_i.
+\end{equation}
+Other available information is a prior estimate of \textbf{x} denoted
+$\mathbf{x}_0$ and its uncertainty $\mathbf{P}_{0}$. For each new
+piece of information, we have an estimate $\mathbf{y}_i$ and its
+uncertainty $\mathbf{P}_{i}$.
+
+\textbf{{Combining many estimates}}
+
+Many estimates are most easily combined with a formula derived from overdetermined least-squares problems:
+\begin{equation}
+\label{eq:18}
+\tilde{\mathbf{x}} = \left({\bf P}^{-1}_0 + \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf E} \right)^{-1} \left( {\bf P}_0^{-1} {\bf x}_{0} +  \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf y}_{i} \right),
+\end{equation}
+and the resulting uncertainty is,
+\begin{equation}
+  \label{eq:19}
+ \tilde{\mathbf{P}}= \left({\bf P}^{-1}_0 + \sum_{i=1}^{N} {\bf E}^T_i {\bf P}_i^{-1} {\bf E} \right)^{-1}
+%{\bf P}_{z} = ({\bf E}^T {\bf P}_y^{-1} {\bf E} + {\bf P}_{x}^{-1})^{-1}.
+\end{equation}
+
+\textbf{{Combining one new estimate}}
+
+Consider the case with just one new piece of information,
+$\mathbf{y}_{1}$, which can be combined with prior information,
+$\mathbf{x}_{0}$. Their relation is,
+\begin{equation}
+\mathbf{y}_1 = \mathbf{E}_1 \mathbf{x}_{0} + \mathbf{n}_1.
+\end{equation}
+They can be combined into a new estimate,
+$\tilde{\mathbf{x}}$, with either one of the next two equations:
+\begin{equation}
+\tilde{\mathbf{x}} = \left({\bf P}^{-1}_0 + {\bf E}^T_1 {\bf P}_1^{-1} {\bf E}_1 \right)^{-1} \left( {\bf P}_0^{-1} {\bf x}_{0} +  {\bf E}^T_1 {\bf P}_1^{-1} {\bf y}_1 \right),
+\end{equation}
+\begin{equation}
+\label{eq:15}
+\tilde{\mathbf{x}} = \mathbf{x}_0 + \mathbf{P}_0 \mathbf{E}^T_1 (\mathbf{E}_1 \mathbf{P}_0 \mathbf{E}^T_1 + \mathbf{P}_1 )^{-1} (\mathbf{y}_1 - \mathbf{E}_1 \mathbf{x}_0) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} are not interchangeable. The reduced uncertainty is:
+\begin{equation}
+ \tilde{\mathbf{P}}= \left({\bf P}^{-1}_0 + {\bf E}^T_1 {\bf P}_1^{-1} {\bf E}_1 \right)^{-1}
+\end{equation}
+or,
+\begin{equation}
+\label{eq:16}
+\tilde{\mathbf{P}} = \mathbf{P}_0 - \mathbf{P}_0 \mathbf{E}^T_1 (\mathbf{E}_1 \mathbf{P}_0 \mathbf{E}^T_1 + \mathbf{P}_1 )^{-1} \mathbf{E}_1 \mathbf{P}_0.
+\end{equation}
+
+
+\subsection{Functional form}
+\label{sec:functional-form}
+
+\textbf{{Combining one new estimate}}
+
+ Instead they are related by,
+\begin{equation}
+\label{eq:17}
+\mathbf{y}_i = \mathcal{E}_i[ \mathbf{x}] + \mathbf{n}_i,
+\end{equation}
+where $\mathcal{E}_1[\cdot]$ is a function. Other available information is a prior
+estimate of \textbf{x} denoted $\mathbf{x}_0$ and its uncertainty
+$\mathbf{P}_{0}$. For each new piece of information, we have an
+estimate $\mathbf{y}_i$ and its uncertainty $\mathbf{P}_{i}$. Useful
+identities for a symmetric \textbf{Q} and non-symmetric \textbf{R}
+include:
+\begin{equation}
+\label{eq:21}
+\mathbf{Q} \mathcal{E}^T_1[\cdot] = \left( \mathcal{E}_1[\mathbf{Q}] \right)^T [\cdot]
+\end{equation}
+and
+\begin{equation}
+\label{eq:21}
+\mathbf{R} \mathcal{E}^T_1[\cdot] = \left( \mathcal{E}_1[\mathbf{R}^T] \right)^T [\cdot].
+\end{equation}
+Then the formula to combine estimates is,
+\begin{equation}
+\tilde{\mathbf{x}} = \mathbf{x}_0 + \left( \mathcal{E}_1[\mathbf{P}_0] \right)^T ( \mathcal{E}_{1}[(\mathcal{E}_1[\mathbf{P}_0])^T]^{T} + \mathbf{P}_1 )^{-1} (\mathbf{y}_1 - \mathcal{E}_1[\mathbf{x}_0]) .
+\end{equation}
+The inputs \textbf{x} and \textbf{y} are not interchangeable. The reduced uncertainty is:
+\begin{equation}
+ \tilde{\mathbf{P}}= \left({\bf P}^{-1}_0 + {\bf E}^T_1 {\bf P}_1^{-1} {\bf E}_1 \right)^{-1}
+\end{equation}
+or,
+\begin{equation}
+\label{eq:16}
+\tilde{\mathbf{P}} = \mathbf{P}_0 - \mathbf{P}_0 \mathbf{E}^T_1 (\mathbf{E}_1 \mathbf{P}_0 \mathbf{E}^T_1 + \mathbf{P}_1 )^{-1} \mathbf{E}_1 \mathbf{P}_0.
+\end{equation}
+
+\section{\texttt{update} function}
+
+\subsection{Combination of two estimates of same dimension}
+\label{sec:basic-form}
+
+Consider a case with one estimate, \textbf{x}, that will be updated with information from a new estimate, \textbf{y}, of the same dimension.
+% Define \textbf{x} to have a value, $\mathbf{x}^-$, before the new information, and $\mathbf{x}^+$ after the new information.
+Then the update is,
+\begin{equation}
+\label{eq:15}
+\delta\mathbf{x} = \mathbf{P}_x (\mathbf{P}_x + \mathbf{P}_y )^{-1} \delta\mathbf{y} .
+\end{equation}
+where $\delta \mathbf{y} = \mathbf{y} - \mathbf{x}$.
+%and $\delta \mathbf{x} = \mathbf{x}^+ - \mathbf{x}^-$.
+% \begin{equation}
+% \label{eq:15}
+% \mathbf{x}(+) - \mathbf{x}(-) = \mathbf{P}_x(-) (\mathbf{P}_x(-) + \mathbf{P}_y )^{-1} (\mathbf{y} - \mathbf{x}(-)) .
+% \end{equation}
+The uncertainty reduces by an amount, $\delta\mathbf{P}$, that is:
+\begin{equation}
+\label{eq:16}
+\delta\mathbf{P}_{x} = - \mathbf{P}_x (\mathbf{P}_x + \mathbf{P}_y )^{-1} \mathbf{P}_x.
+\end{equation}
+
+
+\section{Single model ``textbook'' solution, no prior}
+This math follows Section 1.3.4. in Dynamical Insights from Data, and derives the equation behind the ``solve\_textbook'' method in BLUEs.jl. 
+We seek to solve the system
+\begin{equation}
+\label{eq:2}
+\mathbf{y = Ex}
+\end{equation}
+where $\mathbf{y}$ is some vector of observations, $\mathbf{x}$ is some vector of parameters and $\mathbf{E}$ is a model matrix that relates the two. Our observations $\mathbf{y}$ has some associated noise covariance matrix $\mathbf{C_{nn}}$ Here we solve an overdetermined problem, so $\text{length}(\mathbf{y}) < \text{length}(\mathbf{x})$, and $\textbf{E}$ has more rows than columns. We define a residual $\mathbf{n}$
+\begin{equation}
+\label{eq:3}
+\mathbf{n = y - Ex}
+\end{equation}
+We seek to minimize a cost function defined by the weighted inner product of the residual
+\begin{equation}
+\label{eq:1}
+J = \mathbf{n^TC_{nn}^{-1}n = (y - Ex)^TC_{nn}^{-1}(y-Ex)}
+\end{equation}
+To minimize it, we want to minimize $J$ with respect to $\mathbf{x}$. To accomplish this, we take the first partial derivative $\frac{\partial J}{\partial \mathbf{x}}$, set it equal to 0, and solve for our solution estimate $\mathbf{\tilde{x}}$
+\begin{equation}
+\label{eq:4}
+\frac{\partial J}{\partial\mathbf{x}} = \frac{\partial \mathbf{n}}{\partial \mathbf{x}}\frac{\partial J}{\partial \mathbf{n}}
+\end{equation}
+\begin{equation}
+\label{eq:5}
+\frac{\partial J}{\partial \mathbf{n}} = (\mathbf{C_{nn}}^{-1} + \mathbf{C_{nn}}^{-T})\mathbf{n} = 2 \mathbf{C_{nn}}^{-1} \mathbf{n}
+\end{equation}
+\begin{equation}
+\label{eq:6}
+\frac{\partial \mathbf{n}}{\partial \mathbf{x}} = -\mathbf{E}^{T}
+\end{equation}
+\begin{equation}
+\label{eq:7}
+\frac{\partial J}{\partial\mathbf{x}} = \frac{\partial \mathbf{n}}{\partial \mathbf{x}}\frac{\partial J}{\partial \mathbf{n}} = -2 \mathbf{E}^T \mathbf{C_{nn}}^{-1} \mathbf{n} = -2 \mathbf{E}^T \mathbf{C_{nn}}^{-1} (\mathbf{y} - \mathbf{Ex}) = -2 \mathbf{E}^T\mathbf{C_{nn}}^{-1}\mathbf{y} + 2 \mathbf{E}^T\mathbf{C_{nn}}^{-1}\mathbf{Ex}
+\end{equation}
+We then set the above equation equal to zero, and now solve for the solution estimate $\mathbf{\tilde{x}}$
+\begin{equation}
+  \label{eq:8}
+ -2 \mathbf{E}^T\mathbf{C_{nn}}^{-1}\mathbf{y} + 2 \mathbf{E}^T\mathbf{C_{nn}}^{-1}\mathbf{E\tilde{x}}= 0 
+\end{equation}
+\begin{equation}
+\label{eq:9}
+\mathbf{\tilde{x}} = (\mathbf{E}^{T}\mathbf{C_{nn}}^{-1}\mathbf{E})^{-1}(\mathbf{E}^T\mathbf{C_{nn}}^{-1}\mathbf{y})
+\end{equation}
+
+\section{Multiple model ``textbook'' solution, no prior}
+For our eventual application, we will have multiple, disparate observational vectors $\mathbf{y_{i}}$, that each have their own associated noise covariance matrix $\mathbf{C_{nn}}_{(i)}$, as well as their own model matrix $\mathbf{E}_i$. However, they will all be associated with the same parameter vector $\mathbf{x}$. Therefore, we are solving the simultaneous system
+\begin{equation}
+\label{eq:10}
+\mathbf{y}_{i} = \mathbf{E}_{i}\mathbf{x}
+\end{equation}
+For each observational vector, we can define a corresponding noise vector
+\begin{equation}
+\label{eq:11}
+\mathbf{n}_{i} = \mathbf{y_{i}} - \mathbf{E}_i\mathbf{x}
+\end{equation}
+Each system will have its own cost function, and we want to minimize all of them simultaneously, so we will minimize the sum of the cost functions
+\begin{equation}
+\label{eq:12}
+J = \sum^{N}_{i} \mathbf{n}_{i}^T\mathbf{C_{nn}}_{(i)}\mathbf{n}_{i}
+\end{equation}
+As this is a simple sum, the math will remain relatively similar to Equations \ref{eq:4} - \ref{eq:7}, with the new version of Equation \ref{eq:7} as follows
+\begin{equation}
+\label{eq:13}
+\frac{\partial J}{\partial \mathbf{x}} = \sum_{i}^{N} -2 \mathbf{E}_{i}^{T} \mathbf{C_{nn}}^{-1}_{(i)}\mathbf{y}_{i} + 2 \mathbf{E}^{T}_{i}\mathbf{C_{nn}}^{-1}_{(i)}\mathbf{E}_i\mathbf{x}
+\end{equation}
+If we set Equation \ref{eq:13} equal to 0, and solve for $\mathbf{\tilde{x}}$, we would have to calculate
+\begin{equation}
+\label{eq:14}
+\mathbf{\tilde{x}} = \left(\sum_{i}^{N}\mathbf{E}^{T}_{i}\mathbf{C_{nn}}^{-1}_{(i)}\mathbf{E}_i\right)^{-1} \left(\sum_{i}^{N} \mathbf{E}_{i}^{T} \mathbf{C_{nn}}^{-1}_{(i)}\mathbf{y}_{i}\right)
+\end{equation}
+
+\section{Master equations}
+\label{sec:master-equations}
+
+
+
+The master equations follow for the overdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master5}
+{\tilde {\bf x}} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}^{-1}_{xx})^{-1} ({\bf E}^T {\bf R}_{nn}^{-1} {\bf y} + {\bf C}_{xx}^{-1} {\bf x}_0), \\
+\label{eq:master6}
+{\bf P} &=& ({\bf E}^T {\bf R}_{nn}^{-1} {\bf E} + {\bf C}_{xx}^{-1})^{-1},
+\end{eqnarray}
+and the underdetermined formulation,
+\begin{eqnarray}
+  \label{eq:master7}
+{\tilde {\bf x}} &=& {\bf x}_0 + {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} ({\bf y}-{\bf Ex}_0) \\
+\label{eq:master8}
+\bf{P} &=& {\bf C}_{xx} - {\bf C}_{xx} {\bf E}^T ({\bf EC}_{xx} {\bf E}^T + {\bf R}_{nn})^{-1} {\bf EC}_{xx}.
+\end{eqnarray}
+
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

@@ -1,4 +1,3 @@
-
 """
     Are two matrices within a certain tolerance?
     Use to simplify tests.
@@ -40,6 +39,7 @@ function random_source_water_matrix_vector_pair(M)
     E = UnitfulDimMatrix(ustrip.(Eparent),urange,udomain,dims=(InteriorLocation(interiorlocs),SurfaceRegion(surfaceregions)))
 
     x = UnitfulDimMatrix(randn(N),fill(K,N),dims=(SurfaceRegion(surfaceregions)))
+#    x = DimArray(randn(N).*fill(K,N),(SurfaceRegion(surfaceregions)))
     return E,x
 end
 
@@ -137,7 +137,7 @@ function source_water_solution(surfaceregions,years)
     K = u"K"
     m = length(years)
     n = length(surfaceregions)
-    x = DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions)))
+    x = VectorArray(DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions))))
     return x
 end
 
@@ -148,7 +148,7 @@ function source_water_solution(surfaceregions, years, statevar)
     m = length(years)
     n = length(surfaceregions)
     mat = cat(randn(m, n, 1)K, randn(m, n, 1)permil; dims = 3)
-    x = DimArray(mat, (Ti(years), SurfaceRegion(surfaceregions), StateVariable(statevar)))
+    x = VectorArray(DimArray(mat, (Ti(years), SurfaceRegion(surfaceregions), StateVariable(statevar))))
     return x
 end
 
