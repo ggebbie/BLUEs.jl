@@ -90,7 +90,9 @@
 
         N = size(Px⁻¹,1)
         #x₀ = UnitfulMatrix(zeros(N).*unitdomain(Px⁻¹))
-        x₀ = zeros(N).*unitdomain(Px⁻¹)
+
+        # problem in DD 0.29 with workaround here
+        x₀ = zeros(N).*parent(parent(unitdomain(Px⁻¹)))
         x = Px¹².L*randn(N)
         y = E*x
 

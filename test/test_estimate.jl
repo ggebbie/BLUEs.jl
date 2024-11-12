@@ -207,7 +207,11 @@ end
 
         Px⁻¹ = Diagonal(ustrip.(γ),[kg/g,kg*d/g,kg*d^2/g,kg*d^3/g],[g/kg,g/kg/d,g/kg/d^2,g/kg/d^3])
         #x₀ = UnitfulMatrix(zeros(N).*unitdomain(Cxx⁻¹))
-        x₀ = zeros(N).*unitdomain(Px⁻¹)
+        #x₀ = zeros(N).*unitdomain(Px⁻¹)
+
+        # workaround for unitdomain issue
+        x₀ = zeros(N).*parent(parent(unitdomain(Px⁻¹)))
+
     else
         t = (1:M)
         E =hcat(t.^0, t, t.^2, t.^3)
