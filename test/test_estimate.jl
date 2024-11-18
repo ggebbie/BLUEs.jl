@@ -13,6 +13,10 @@
         E = randn(M,M)
         aval = Measurements.value.(a)
         aerr = Measurements.uncertainty.(a);
+
+        # allow scalar input to Estimate constructor 
+        x9 = Estimate(first(aval), first(aerr))
+
         x0 = Estimate(Measurements.value.(a),
             Diagonal(aerr.^2))
         x  = Estimate(aval, aerr) # just provide standard error
