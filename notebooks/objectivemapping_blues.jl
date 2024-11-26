@@ -192,7 +192,7 @@ length(xtrue)
 
 # ╔═╡ a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
 #use `BLUEs.jl` to package as an `Estimate`
-x0vals = zeros(eltype(xtrue)length(xtrue)) # first guess
+x0vals = zeros(eltype(xtrue),length(xtrue)) # first guess
 
 # ╔═╡ 9f01b5b4-d086-44d7-83d1-90f9d8ed21b6
 x0 = Estimate(x0vals, Cxx)
