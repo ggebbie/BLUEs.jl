@@ -1,20 +1,17 @@
 ### A Pluto.jl notebook ###
-# v0.19.32
+# v0.20.3
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ 84a3f486-6566-4dad-99f0-944d8b67f6a0
-import Pkg; Pkg.activate(".."); Pkg.instantiate()
+import Pkg; Pkg.activate("."); Pkg.instantiate()
 
 # ╔═╡ 82de0964-3a0a-4580-bb83-b8d43a9e7d1b
 using PlutoUI
 
 # ╔═╡ 71178a40-391d-4abc-8a7a-d03c90c28952
 using Unitful
-
-# ╔═╡ 8de4b82d-0323-4e43-854e-3f8dfef60201
-using UnitfulLinearAlgebra
 
 # ╔═╡ 793180e7-d32d-4b09-8a04-1861b3306a46
 using LinearAlgebra
@@ -188,7 +185,12 @@ Cxy = Cxx*transpose(E)
 Cyy = E*Cxx*transpose(E) + Cnn
 
 # ╔═╡ 7be7ebe9-4429-4c73-8a64-4bc868b7e442
-x̃ = vec(UnitfulMatrix(Cxy)*(UnitfulMatrix(Cyy)\y))
+# x̃ = vec(UnitfulMatrix(Cxy)*(UnitfulMatrix(Cyy)\y)) # would require UnitfulLinearAlgebra
+#x̃ = Cxy*(Cyy\y) # not handled by Unitful.jl
+x̃ = Cxy*inv(Cyy)*y # a slow-ish workaround
+
+# ╔═╡ d3dbbaa7-7b72-49fa-8aac-fa4d02259806
+inv(Cyy)*y
 
 # ╔═╡ 61fddba8-ec75-44c0-ab1e-a91967843075
 x̃field = reshape(x̃,Nx,Ny) # turn it back into 2D
@@ -201,7 +203,8 @@ end
 
 # ╔═╡ 3dce7547-db3f-48b5-aff4-fce02bbb012f
 ## next, calculate the map uncertainty
-P = Cxx - Matrix(Cxx * transpose(E) * (UnitfulMatrix(Cyy) \ UnitfulMatrix(E*Cxx)))
+# P = Cxx - Matrix(Cxx * transpose(E) * (UnitfulMatrix(Cyy) \ UnitfulMatrix(E*Cxx)))
+P = Cxx - Cxx * transpose(E) * inv(Cyy) * E*Cxx
 
 # ╔═╡ 7b59fc48-dd30-4f84-8f7c-6d00b2ab85b7
 σₓ̃ = .√(reshape(diag(P),Nx,Ny)) # turn uncertainty back into 2D
@@ -271,6 +274,7 @@ plotly()
 # ╠═32a29c48-1dc1-485f-a343-71a8949aef3d
 # ╠═5ded26d7-1871-4aa5-b8f2-e6905cb38e81
 # ╠═7be7ebe9-4429-4c73-8a64-4bc868b7e442
+# ╠═d3dbbaa7-7b72-49fa-8aac-fa4d02259806
 # ╠═61fddba8-ec75-44c0-ab1e-a91967843075
 # ╠═371c28b5-90e0-4f69-ac9b-e706fe960d07
 # ╠═3dce7547-db3f-48b5-aff4-fce02bbb012f
@@ -283,7 +287,6 @@ plotly()
 # ╠═84a3f486-6566-4dad-99f0-944d8b67f6a0
 # ╠═82de0964-3a0a-4580-bb83-b8d43a9e7d1b
 # ╠═71178a40-391d-4abc-8a7a-d03c90c28952
-# ╠═8de4b82d-0323-4e43-854e-3f8dfef60201
 # ╠═793180e7-d32d-4b09-8a04-1861b3306a46
 # ╠═7bcfbc9d-cc6b-49f3-a2af-dc9356afceb1
 # ╠═f9975f99-3795-4f7e-95ea-fb0ce894d4ec
