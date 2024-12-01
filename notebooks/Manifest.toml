@@ -37,13 +37,12 @@ version = "4.1.1"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.AlgebraicArrays]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "72aa0eaf87629326b9f5363449fa9fc18bbf92eb"
+deps = ["DimensionalData", "LinearAlgebra", "Revise", "Unitful"]
+git-tree-sha1 = "97ccebb8b680f2e5873fed75cb216f8a44c552f6"
 repo-rev = "main"
 repo-url = "https://github.com/ggebbie/AlgebraicArrays.jl"
 uuid = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
-version = "1.0.6-DEV"
-weakdeps = ["DimensionalData", "Unitful"]
+version = "1.0.8-DEV"
 
     [deps.AlgebraicArrays.extensions]
     AlgebraicArraysDimensionalDataExt = ["DimensionalData"]
@@ -91,9 +90,7 @@ version = "1.11.0"
 
 [[deps.BLUEs]]
 deps = ["AlgebraicArrays", "DimensionalData", "LinearAlgebra", "Measurements", "Revise", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
-git-tree-sha1 = "8362dbfe7d662e528966eba7764f07bbc7e664af"
-repo-rev = "main"
-repo-url = "https://github.com/ggebbie/BLUEs.jl"
+path = ".."
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
 version = "0.2.4"
 

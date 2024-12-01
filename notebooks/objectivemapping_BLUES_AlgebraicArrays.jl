@@ -32,7 +32,13 @@ using DimensionalData:@dim
 using AlgebraicArrays
 
 # ╔═╡ a72352ab-cdfb-42db-85de-ea88132ba9dd
-md""" # Objective mapping with `BLUEs.jl`"""
+md""" # Objective mapping with `BLUEs.jl` and  `AlgebraicArrays.jl`"""
+
+# ╔═╡ de4be099-b717-48c1-a713-4e0bb785953e
+# BLUES.jl: handles linear algebra of Gauss-Markov method
+
+# ╔═╡ f7d5d76f-189f-4783-88bb-352978524c4a
+# AlgebraicArrays.jl: handles translation between 2D grid and linear algebra matrices and vectors
 
 # ╔═╡ 7d13a231-8ee5-459b-9c0e-dd81ab87bda1
 md""" ## 2D objective map of sea surface height """
@@ -65,23 +71,14 @@ ry = range(0km,ΔY,length=Ny)  # grid axis number 2: meridional distance
 # ╔═╡ 444a8791-93f8-4ba1-906f-858d365092f7
 Grid = (X(rx),Y(ry))
 
-# ╔═╡ cd4671f0-cdbe-4bd7-a04e-d51cbbfeb5d4
-# ╠═╡ disabled = true
-#=╠═╡
-Rρ = MatrixArray(zeros(prod(size(Grid)),prod(size(Grid))), Grid, Grid); # long-winded way to make a `MatrixArray`
-  ╠═╡ =#
-
 # ╔═╡ 7dc54541-0664-464b-92fa-901e7ed512b6
 # diagonal elements of uncertainty matrix
 # nonzero for stability of Cholesky decomposition
-Rρ_diag = fill(1e-6,Grid, :VectorArray)
+Rρ_diag = fill(1e-6, Grid, :VectorArray)
 
 # ╔═╡ f8b54566-c037-4c9d-b151-a4fd2ac2b76e
 # diagonal `MatrixArray` to precondition matrix for stability
 Rρ = Diagonal(Rρ_diag)
-
-# ╔═╡ 03509c0a-6122-4005-9686-8aca4bd38f99
-Rρ
 
 # ╔═╡ 0828e154-50ba-4dee-be43-df880e34ab1b
 # set lengthscales
@@ -118,27 +115,25 @@ end
 
 # ╔═╡ 12028e54-7bda-41ab-b1a6-916f1e2619ca
 # turn correlation matrix into autocovariance matrix: requires variance info
-σx = 50cm
+σx = 50.0cm # created a difficult-to-find error if this is an integer (!!)
 
 # ╔═╡ 767418fa-ed77-4835-8c5c-0cc89d8d71bc
 # Here I need to produce some "synthetic" data
 # these are the extra steps
 
 # ╔═╡ f5a4bdbe-863c-4397-a163-c547b397c46c
-Rρ12 = cholesky(Rρ) # cholesky 
-
-# ╔═╡ b1027abd-b4af-42d2-8fe3-32a5c39b5b77
-MatrixArray(cholesky(Matrix(Rρ)),(dims(Rρ),dims(Rρ)))
-
+begin
+	# `cholesky` not yet implemented in AlgebraicArrays
+	# here's a workaround
+	Rρ12 = AlgebraicArray(cholesky(Matrix(Rρ)).U, Grid, Grid) # cholesky 
+end
 
 # ╔═╡ 38b8e924-6ec1-41f0-a972-756ce1c5cd4d
-xtrue = √σ²*Rρ12.L*randn(Nx*Ny) 
+# xtrue = √σ²*Rρ12.L*randn(Grid) # this would be proper if Cholesky factorization existed for `MatrixArray`
+xtrue = σx*transpose(Rρ12)*randn(Grid, :VectorArray)
 
-# ╔═╡ 1632e60f-5568-4873-8900-84a0608c9dab
-xtruefield = reshape(xtrue,Nx,Ny)
-
-# ╔═╡ 3fb8271b-bcbd-4a38-9589-8723c490fbba
-contourf(rx,ry,ustrip.(xtruefield'),xlabel="zonal distance",ylabel="meridional distance",clabels=true,cbar=false,title="true SSH")
+# ╔═╡ 0f7fbda2-cb2a-42ed-a345-0686486fe4c1
+contourf(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,cbar=true,title="true SSH")
 
 # ╔═╡ 6510d727-5612-4605-9f35-9ce8eda98f02
 Nobs = 20 # number of observations
@@ -146,77 +141,105 @@ Nobs = 20 # number of observations
 # ╔═╡ bdafc085-e15e-4130-bca1-7abf5e724025
 robs = [(ΔX*rand(),ΔY*rand()) for i in 1:Nobs ] # uniformly sampled
 
-# ╔═╡ 37c5091f-3cf5-46b0-8874-59a047a191e6
-# make E matrix for these observations, use bilinear interpolation
-# get bilinear interpolation coefficients
-
-# ╔═╡ 3dba0928-09f3-4108-9d55-5124f3ec59c1
-E = zeros(Nobs,Nx*Ny)
-
-# ╔═╡ 64f8cb6c-9c8a-4f08-b970-697708da228b
-for oo in eachindex(robs)
-
-	# bilinear interpolation: put into a function 
-	
-	ydist = [ry[ii] .- robs[oo][2] for ii in eachindex(ry)] # y distance between observation and y grid points
-	xdist = [rx[ii] .- robs[oo][1] for ii in eachindex(rx)] # x distance between observation and x grid points
-	
-	xhi,ihi = findmin(x -> x > 0km ? x : 1e6km,xdist) # find minimum positive distance
-	δx,ilo = findmin(x -> x ≤ 0km ? abs(x) : 1e6km,xdist) # find minimum negative distance
-	
-	yhi,jhi = findmin(y -> y > 0km ? y : 1e6km,ydist) # find minimum positive distance
-	δy,jlo = findmin(y -> y ≤ 0km ? abs(y) : 1e6km,ydist) # find minimum negative distance
-	Δx = δx + xhi # grid spacing
-	Δy = δy + yhi # grid spacing : y	
-	
-	coeffs = zeros(Nx,Ny)
-	denom = Δx * Δy
-	coeffs[ilo,jlo] = ((Δx - δx)*(Δy - δy))/denom
-	coeffs[ilo,jhi] = ((Δx - δx)*(δy))/denom
-	coeffs[ihi,jlo] = ((δx)*(Δy - δy))/denom
-	coeffs[ihi,jhi] = (δx*δy)/denom
-	E[oo,:] = vec(coeffs)
-end
-	
-
-# ╔═╡ dcd92fb1-33aa-43f7-b0aa-396df9faf4de
-# check that each row sums to one
-sum(E,dims=2)
-
 # ╔═╡ df917296-aab3-424a-9371-0ba849c51189
 @dim Obs "observations"
 
-# ╔═╡ 1538327f-dc2a-494c-a146-d725f91c0a34
-# add the data to the plot
-rxobs = [robs[oo][1] for oo in eachindex(robs)]
+# ╔═╡ 6c97f8e0-e814-4e6f-9421-62b546de821e
+SSH_obs = Obs(robs)
 
-# ╔═╡ 74413262-c13e-42c7-be41-6b8b829e9b5e
-ryobs = [robs[oo][2] for oo in eachindex(robs)]
+# ╔═╡ 9cc0fcc8-c92f-411b-9ab4-cccfbe73be61
+"""
+    function interpolate_bilinearly(x::VectorArray, location::Tuple)
 
-# ╔═╡ 3a5b4094-c465-4041-8486-f5c2574980b9
-robs
+Given gridded information `x`, predict an observation at `location`
 
-# ╔═╡ bcd788ba-c369-4993-ae62-d6075dda282b
-# noise on observations
-n = randn(Obs(robs),:VectorArray)*σy
+    function interpolate_bilinearly(x::VectorArray, locations::DimensionalData.Dimension)
 
-# ╔═╡ fe154fd1-e45a-46ac-afa1-e008abf6e62d
-# better output format (need to update AlgebraicArraysDimensionalDataExt to make this automatic)
-parent(n) 
+Given gridded information `x`, predict many observations at `locations`
 
-# ╔═╡ 7276ef68-34d6-4dd8-9a25-95e86e6b6183
-# Sample the true field
-yvals = E*xtrue + σₙ*randn(Nobs) 
+    function interpolate_bilinearly(P::MatrixArray, locations::DimensionalData.Dimension)
+
+Given many gridded fields in the columns of `P`, predict many observations at `locations`
+"""
+function interpolate_bilinearly(x::VectorArray, location::Tuple)
+	
+	xdist = val(first(dims(x))) .- first(location) 
+	ydist = val(last(dims(x))) .- last(location) 
+	largeval = 1e6km
+	xhi,ihi = findmin(x -> x > 0km ? x : largeval,xdist) # find minimum positive distance
+	δx,ilo = findmin(x -> x ≤ 0km ? abs(x) : largeval,xdist) # find minimum negative distance
+	
+	yhi,jhi = findmin(y -> y > 0km ? y : largeval,ydist) # find minimum positive distance
+	δy,jlo = findmin(y -> y ≤ 0km ? abs(y) : largeval,ydist) # find minimum negative distance
+	Δx = δx + xhi # grid spacing
+	Δy = δy + yhi # grid spacing : y	
+	denom = Δx * Δy
+
+	obs = zero(eltype(x))
+	obs += x[ilo, jlo] * ((Δx - δx)*(Δy - δy))/denom
+	obs += x[ilo, jhi] * ((Δx - δx)*(δy))/denom
+	obs += x[ihi, jlo] * ((δx)*(Δy - δy))/denom
+	obs += x[ihi, jhi] * (δx*δy)/denom
+	return obs
+end
+
+# ╔═╡ b917adee-6145-4766-bc5d-ca53d31da582
+function interpolate_bilinearly(x::VectorArray, locations::DimensionalData.Dimension)
+	y = zeros(eltype(x), locations, :VectorArray)
+ 	for (i, o) in enumerate(locations)
+		y[i] += interpolate_bilinearly(x, o)	
+	end
+	return y
+end
+
+# ╔═╡ 52d1e4d2-86b0-4aa6-8a9c-532e1cafa3c1
+zeros(eltype(xtrue),dims(SSH_obs),:VectorArray)
+
+# ╔═╡ 137af3c0-d802-4752-897c-f800fe635a4d
+# boilerplate function to extend from `VectorArray`s to `MatrixArray`s
+function interpolate_bilinearly(P::MatrixArray, locations::DimensionalData.Dimension) 
+    T = typeof(parent(interpolate_bilinearly(first(P), locations)))
+    Pyx = Array{T}(undef,size(P))
+    for i in eachindex(P)
+        Pyx[i] = parent(interpolate_bilinearly(P[i], locations))
+    end
+    return  MatrixArray(DimArray(Pyx, domaindims(P)))
+end
+
+# ╔═╡ 54228f3e-1291-4d8e-8fc9-f3a8a44085de
+ytrue = interpolate_bilinearly(xtrue, SSH_obs) # perfect observations
+
+# ╔═╡ dcd92fb1-33aa-43f7-b0aa-396df9faf4de
+# check that each observation is one when truth is one (bilinear interpolation is a true average)
+all(isapprox.(interpolate_bilinearly( ones(Grid, :VectorArray), SSH_obs), 1.0))
+
+# ╔═╡ 93168c75-eeba-4b64-9054-35981c93701b
+# how much observational noise?
+σy = 1cm
+
+# ╔═╡ 180bce23-cc3c-4869-ae30-2cd0d61aa34f
+# standard error on the grid
+yerr = fill(σy, SSH_obs, :VectorArray)
+
+# ╔═╡ 63eb3d93-e49e-477d-bbf2-02c9b59123f3
+n = σy * randn(SSH_obs, :VectorArray)
+
+# ╔═╡ aeebaa1f-f83b-45d2-8e57-7385e5641bcb
+ycontaminated = ytrue + n
 
 # ╔═╡ 8e6032a0-0de4-4fef-9849-60e963daf952
-y = Estimate(yvals,Cnn)
+y = Estimate(ycontaminated, yerr) # bundle observations and uncertainty
 
-# ╔═╡ d8ac83da-1829-4064-a08f-89041e60bdc2
+# ╔═╡ 1538327f-dc2a-494c-a146-d725f91c0a34
+# add the data to the plot
+rxobs = first.(robs) #[robs[oo][1] for oo in eachindex(robs)]
 
+# ╔═╡ 74413262-c13e-42c7-be41-6b8b829e9b5e
+ryobs = last.(robs) # [robs[oo][2] for oo in eachindex(robs)]
 
 # ╔═╡ 007e1141-4a33-4538-a089-b3238117af3d
 begin
-	contour(rx,ry,ustrip.(xtruefield'),xlabel="zonal distance",ylabel="meridional distance",clabels=true,title="true SSH with $Nobs obs",fill=true)
+	contour(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,title="true SSH with $Nobs obs",fill=true)
 	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",cbar=false,markersize=6) 
 end
 
@@ -224,19 +247,22 @@ end
 ## Now we have synthetic observations
 # Let's see if the true solution can be backed out from the sparse obs.
 
-
-# ╔═╡ 3792cee9-3788-40f9-acf4-66f7b6f5cfcf
-Px = σ²*Rρ
-
 # ╔═╡ a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
 #use `BLUEs.jl` to package as an `Estimate`
-x0vals = zeros(Grid, :VectorArray)*unit(√σ²) # first guess
+x0vals = zeros(eltype(xtrue), Grid, :VectorArray) # first guess
 
-# ╔═╡ 9f01b5b4-d086-44d7-83d1-90f9d8ed21b6
-x0 = Estimate(x0vals, Px)
+# ╔═╡ 299b6f3b-1181-4059-ba2f-c53a6b6477fa
+x0 = Estimate(x0vals, σx^2 * Rρ)
+
+# ╔═╡ bfea9c06-0ac7-4810-8a3b-9819c9f019e9
+# solve with `combine`; it expects a function with just one argument
+predict_obs(x0) = interpolate_bilinearly(x0, SSH_obs)
 
 # ╔═╡ 1be2b0ac-39c0-467f-8a27-eae0b176c753
-x̃ = combine(x0, y, E)
+x̃ = combine(x0, y, predict_obs)
+
+# ╔═╡ de4f4352-aa74-4c25-8fb3-cfc41c3354e6
+dims(y.v)
 
 # ╔═╡ 61fddba8-ec75-44c0-ab1e-a91967843075
 x̃field = reshape(x̃.v,Nx,Ny) # turn it back into 2D
@@ -247,12 +273,9 @@ begin
 	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",ms=6,cbar=false) 
 end
 
-# ╔═╡ e155b5ea-da51-45d4-a951-1b3aa1f28b63
-σx̃field = reshape(x̃.σ,Nx,Ny) # turn it back into 2D
-
 # ╔═╡ 573c07ba-2c7a-4b95-9ed6-dd0563c257e5
 begin
-	contourf(rx,ry,σx̃field',xlabel="zonal distance",ylabel="meridional distance",title="SSH uncertainty",clabels=true,cbar=false)
+	contourf(rx,ry,transpose(parent(x̃.σ)),xlabel="zonal distance",ylabel="meridional distance",title="SSH uncertainty",clabels=true,cbar=true)
 	scatter!(rxobs,ryobs,color=:white,label="y",ms=6) 
 end
 
@@ -260,27 +283,18 @@ end
 md""" ## how well is the data fit? """
 
 # ╔═╡ 387f5555-c3f3-4b80-849d-8d65491fc6f8
-scatter(y.v,(E*x̃).v,xlabel="y",ylabel="ỹ")
+scatter(y.v,predict_obs(x̃.v),xlabel="y",ylabel="ỹ")
 
 # ╔═╡ 935faa9d-990d-4bfa-b70c-b11bc824e20b
-scatter(y.v,y.v-(E*x̃).v,xlabel="y",ylabel="ñ")
+scatter(y.v,y.v-predict_obs(x̃.v),xlabel="y",ylabel="ñ")
 
 # ╔═╡ f9975f99-3795-4f7e-95ea-fb0ce894d4ec
 plotly()
 
-# ╔═╡ 180bce23-cc3c-4869-ae30-2cd0d61aa34f
-# ╠═╡ disabled = true
-#=╠═╡
-# get the noise covariance
-σy = Diagonal(fill(σₙ^2,Nobs))
-  ╠═╡ =#
-
-# ╔═╡ 93168c75-eeba-4b64-9054-35981c93701b
-# how much observational noise
-σy = 1cm
-
 # ╔═╡ Cell order:
-# ╠═a72352ab-cdfb-42db-85de-ea88132ba9dd
+# ╟─a72352ab-cdfb-42db-85de-ea88132ba9dd
+# ╠═de4be099-b717-48c1-a713-4e0bb785953e
+# ╠═f7d5d76f-189f-4783-88bb-352978524c4a
 # ╟─7d13a231-8ee5-459b-9c0e-dd81ab87bda1
 # ╠═e3b69a7f-cad0-4535-b691-a2d53c586581
 # ╠═8d49fedf-1bf6-45cb-b85b-8b438663452e
@@ -291,48 +305,44 @@ plotly()
 # ╠═ae3a2af0-8fae-11ee-288d-732288c2bc04
 # ╠═28a84a7a-36b8-4319-9eed-693491723f6d
 # ╠═444a8791-93f8-4ba1-906f-858d365092f7
-# ╠═cd4671f0-cdbe-4bd7-a04e-d51cbbfeb5d4
 # ╠═7dc54541-0664-464b-92fa-901e7ed512b6
 # ╠═f8b54566-c037-4c9d-b151-a4fd2ac2b76e
 # ╠═d022a766-657e-4566-a3de-7d25a4810d74
-# ╠═03509c0a-6122-4005-9686-8aca4bd38f99
 # ╠═0828e154-50ba-4dee-be43-df880e34ab1b
 # ╠═a42f66cb-3dc1-46cb-be94-38979d815d78
 # ╠═12028e54-7bda-41ab-b1a6-916f1e2619ca
 # ╠═767418fa-ed77-4835-8c5c-0cc89d8d71bc
 # ╠═f5a4bdbe-863c-4397-a163-c547b397c46c
-# ╠═b1027abd-b4af-42d2-8fe3-32a5c39b5b77
 # ╠═38b8e924-6ec1-41f0-a972-756ce1c5cd4d
-# ╠═1632e60f-5568-4873-8900-84a0608c9dab
-# ╠═3fb8271b-bcbd-4a38-9589-8723c490fbba
+# ╠═0f7fbda2-cb2a-42ed-a345-0686486fe4c1
 # ╠═6510d727-5612-4605-9f35-9ce8eda98f02
 # ╠═bdafc085-e15e-4130-bca1-7abf5e724025
-# ╠═37c5091f-3cf5-46b0-8874-59a047a191e6
-# ╠═3dba0928-09f3-4108-9d55-5124f3ec59c1
-# ╠═64f8cb6c-9c8a-4f08-b970-697708da228b
+# ╠═df917296-aab3-424a-9371-0ba849c51189
+# ╠═6c97f8e0-e814-4e6f-9421-62b546de821e
+# ╠═9cc0fcc8-c92f-411b-9ab4-cccfbe73be61
+# ╠═b917adee-6145-4766-bc5d-ca53d31da582
+# ╠═52d1e4d2-86b0-4aa6-8a9c-532e1cafa3c1
+# ╠═137af3c0-d802-4752-897c-f800fe635a4d
+# ╠═54228f3e-1291-4d8e-8fc9-f3a8a44085de
 # ╠═dcd92fb1-33aa-43f7-b0aa-396df9faf4de
 # ╠═93168c75-eeba-4b64-9054-35981c93701b
 # ╠═180bce23-cc3c-4869-ae30-2cd0d61aa34f
-# ╠═df917296-aab3-424a-9371-0ba849c51189
+# ╠═63eb3d93-e49e-477d-bbf2-02c9b59123f3
+# ╠═aeebaa1f-f83b-45d2-8e57-7385e5641bcb
 # ╠═8e6032a0-0de4-4fef-9849-60e963daf952
 # ╠═1538327f-dc2a-494c-a146-d725f91c0a34
 # ╠═74413262-c13e-42c7-be41-6b8b829e9b5e
-# ╠═3a5b4094-c465-4041-8486-f5c2574980b9
-# ╠═bcd788ba-c369-4993-ae62-d6075dda282b
-# ╠═fe154fd1-e45a-46ac-afa1-e008abf6e62d
-# ╠═7276ef68-34d6-4dd8-9a25-95e86e6b6183
-# ╠═d8ac83da-1829-4064-a08f-89041e60bdc2
 # ╠═007e1141-4a33-4538-a089-b3238117af3d
 # ╠═a00b4df5-e23c-4f1e-9188-c7305ca3bf1d
-# ╠═3792cee9-3788-40f9-acf4-66f7b6f5cfcf
 # ╠═a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
-# ╠═9f01b5b4-d086-44d7-83d1-90f9d8ed21b6
+# ╠═299b6f3b-1181-4059-ba2f-c53a6b6477fa
+# ╠═bfea9c06-0ac7-4810-8a3b-9819c9f019e9
 # ╠═1be2b0ac-39c0-467f-8a27-eae0b176c753
+# ╠═de4f4352-aa74-4c25-8fb3-cfc41c3354e6
 # ╠═61fddba8-ec75-44c0-ab1e-a91967843075
 # ╠═371c28b5-90e0-4f69-ac9b-e706fe960d07
-# ╠═e155b5ea-da51-45d4-a951-1b3aa1f28b63
 # ╠═573c07ba-2c7a-4b95-9ed6-dd0563c257e5
-# ╠═545a3bc2-f399-41eb-99fc-1ea40239d856
+# ╟─545a3bc2-f399-41eb-99fc-1ea40239d856
 # ╠═387f5555-c3f3-4b80-849d-8d65491fc6f8
 # ╠═935faa9d-990d-4bfa-b70c-b11bc824e20b
 # ╠═84a3f486-6566-4dad-99f0-944d8b67f6a0
