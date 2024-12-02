@@ -56,8 +56,20 @@ Nobs = 20 # number of observations
 # ╔═╡ ae71056a-3520-415a-9962-9e953a32780b
 md""" ### jumping right into it, the results """
 
+# ╔═╡ 545a3bc2-f399-41eb-99fc-1ea40239d856
+md""" ## how well is the data fit? """
+
+# ╔═╡ bbcbe01c-d852-49e3-a8ee-b5b2e26d798d
+# other diagnostics: z-score, actual/true error, accuracy of error bars
+
 # ╔═╡ 7e677e5a-7b3e-4d9a-8bf4-e8bbd986fc6b
 md""" ### make the grid """
+
+# ╔═╡ d1a99581-7505-49f3-9184-db5278de12a4
+md""" ### create autocovariance matrix """
+
+# ╔═╡ 9adb250f-3b02-4db7-a31d-9f7e79cb1910
+md""" ### produce synthetic data """
 
 # ╔═╡ 767418fa-ed77-4835-8c5c-0cc89d8d71bc
 # Here I need to produce some "synthetic" data
@@ -86,12 +98,15 @@ function interpolate_bilinearly(P::MatrixArray, locations::DimensionalData.Dimen
     return  MatrixArray(DimArray(Pyx, domaindims(P)))
 end
 
+# ╔═╡ affa28b6-8efe-41e3-a588-38851aa7903d
+md""" ### make first guess """
+
 # ╔═╡ a00b4df5-e23c-4f1e-9188-c7305ca3bf1d
 ## Now we have synthetic observations
 # Let's see if the true solution can be backed out from the sparse obs.
 
-# ╔═╡ 545a3bc2-f399-41eb-99fc-1ea40239d856
-md""" ## how well is the data fit? """
+# ╔═╡ cb54ec24-8a02-4f3a-99fd-9ae1a98d73e0
+md""" ### combine first-guess and observational information """
 
 # ╔═╡ 180b7edb-e029-49f7-b301-787b2a71a138
 md""" ### set up the physical units in the problem"""
@@ -101,7 +116,7 @@ km = u"km" # for the grid size
 
 # ╔═╡ 0828e154-50ba-4dee-be43-df880e34ab1b
 # set correlation lengthscales
-Lx = 300km
+Lx = 300km 
 
 # ╔═╡ 14b2c84e-78c1-459b-8c50-e0b54e4e533c
 Ly = 100km
@@ -173,11 +188,12 @@ begin
 	jval = 6
 	iprint = string(round(typeof(1km),rx[ival]))
 	jprint = string(round(typeof(1km),ry[jval]))
-	contourf(rx,ry,parent(Rρ[ival,jval])',
+	contourf(rx,ry,transpose(parent(Rρ[ival,jval])),
 		title="grid point ("*iprint*","*jprint*")",
 		titlefontsize=8,
 		ylabel="Y",
-		xlabel="X") 
+		xlabel="X",
+		color=:amp) 
 end
 
 # ╔═╡ 9cc0fcc8-c92f-411b-9ab4-cccfbe73be61
@@ -236,7 +252,7 @@ cm = u"cm" # for SSH (mapped variable)
 xtrue = σx*transpose(Rρ12)*randn(Grid, :VectorArray)
 
 # ╔═╡ 0f7fbda2-cb2a-42ed-a345-0686486fe4c1
-contourf(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,cbar=true,title="true SSH")
+contourf(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,levels=-100:10:100,cbar=false,title="true SSH")
 
 # ╔═╡ 52d1e4d2-86b0-4aa6-8a9c-532e1cafa3c1
 zeros(eltype(xtrue),dims(SSH_obs),:VectorArray)
@@ -270,29 +286,62 @@ y = Estimate(ycontaminated, yerr) # bundle observations and uncertainty
 
 # ╔═╡ 007e1141-4a33-4538-a089-b3238117af3d
 begin
-	contour(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,title="true SSH with $Nobs obs",fill=true)
-	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",cbar=false,markersize=6) 
+	contour(rx,ry,transpose(parent(xtrue)),
+		xlabel="zonal distance",
+		ylabel="meridional distance",
+		clabels=true,
+		cbar=false,
+		title="true SSH with $Nobs obs",
+		fill=true,
+		levels=-100:10:100)
+	scatter!(rxobs,ryobs,zcolor=y.v,cbar=false,label="y",markersize=7) 
 end
 
 # ╔═╡ 1be2b0ac-39c0-467f-8a27-eae0b176c753
-x̃ = combine(x0, y, predict_obs)
-
-# ╔═╡ 61fddba8-ec75-44c0-ab1e-a91967843075
-x̃field = reshape(x̃.v,Nx,Ny) # turn it back into 2D
-
-# ╔═╡ 573c07ba-2c7a-4b95-9ed6-dd0563c257e5
-begin
-	contourf(rx,ry,transpose(parent(x̃.σ)),xlabel="zonal distance",ylabel="meridional distance",title="SSH uncertainty",clabels=true,cbar=true)
-	scatter!(rxobs,ryobs,color=:white,label="y",ms=6) 
-end
-
-# ╔═╡ de4f4352-aa74-4c25-8fb3-cfc41c3354e6
-dims(y.v)
+x̃ = combine(x0, y, predict_obs) 
 
 # ╔═╡ 371c28b5-90e0-4f69-ac9b-e706fe960d07
 begin
-	contourf(rx,ry,x̃field',xlabel="zonal distance",ylabel="meridional distance",title="SSH objective map")
-	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",ms=6,cbar=false) 
+	contourf(rx,ry,transpose(parent(x̃.v)),
+		xlabel="zonal distance",
+		ylabel="meridional distance",
+		title="SSH objective map",
+		levels=-100:10:100,
+		clabels=true)
+	scatter!(rxobs,
+		ryobs,
+		zcolor=y.v,
+		label="y",
+		ms=6,
+		cbar=false) 
+end
+
+# ╔═╡ 573c07ba-2c7a-4b95-9ed6-dd0563c257e5
+begin
+	contourf(rx,ry,transpose(parent(x̃.σ)),
+		xlabel="zonal distance",
+		ylabel="meridional distance",
+		title="SSH uncertainty",
+		clabels=true,
+		cbar=false,
+		level=0:10:100)
+	scatter!(rxobs,ryobs,color=:white,label="y",ms=6) 
+end
+
+# ╔═╡ 4f814626-c20c-47e7-93b5-623c90afcc1b
+begin
+	contourf(rx,ry,transpose(parent(x̃.v-xtrue)),
+		xlabel="zonal distance",
+		ylabel="meridional distance",
+		title="SSH objective map error",
+		levels=-100:10:100,
+		clabels=true)
+	scatter!(rxobs,
+		ryobs,
+		zcolor=y.v-ytrue,
+		label="y",
+		ms=6,
+		cbar=false) 
 end
 
 # ╔═╡ 387f5555-c3f3-4b80-849d-8d65491fc6f8
@@ -321,15 +370,25 @@ plotly()
 # ╠═6510d727-5612-4605-9f35-9ce8eda98f02
 # ╠═12028e54-7bda-41ab-b1a6-916f1e2619ca
 # ╟─ae71056a-3520-415a-9962-9e953a32780b
-# ╠═0f7fbda2-cb2a-42ed-a345-0686486fe4c1
+# ╟─0f7fbda2-cb2a-42ed-a345-0686486fe4c1
+# ╟─007e1141-4a33-4538-a089-b3238117af3d
+# ╟─371c28b5-90e0-4f69-ac9b-e706fe960d07
+# ╟─573c07ba-2c7a-4b95-9ed6-dd0563c257e5
+# ╟─4f814626-c20c-47e7-93b5-623c90afcc1b
+# ╟─545a3bc2-f399-41eb-99fc-1ea40239d856
+# ╟─387f5555-c3f3-4b80-849d-8d65491fc6f8
+# ╟─935faa9d-990d-4bfa-b70c-b11bc824e20b
+# ╠═bbcbe01c-d852-49e3-a8ee-b5b2e26d798d
 # ╟─7e677e5a-7b3e-4d9a-8bf4-e8bbd986fc6b
 # ╠═ae3a2af0-8fae-11ee-288d-732288c2bc04
 # ╠═28a84a7a-36b8-4319-9eed-693491723f6d
 # ╠═444a8791-93f8-4ba1-906f-858d365092f7
+# ╟─d1a99581-7505-49f3-9184-db5278de12a4
 # ╠═7dc54541-0664-464b-92fa-901e7ed512b6
 # ╠═f8b54566-c037-4c9d-b151-a4fd2ac2b76e
 # ╠═d022a766-657e-4566-a3de-7d25a4810d74
-# ╠═a42f66cb-3dc1-46cb-be94-38979d815d78
+# ╟─a42f66cb-3dc1-46cb-be94-38979d815d78
+# ╟─9adb250f-3b02-4db7-a31d-9f7e79cb1910
 # ╠═767418fa-ed77-4835-8c5c-0cc89d8d71bc
 # ╠═f5a4bdbe-863c-4397-a163-c547b397c46c
 # ╠═38b8e924-6ec1-41f0-a972-756ce1c5cd4d
@@ -349,19 +408,13 @@ plotly()
 # ╠═8e6032a0-0de4-4fef-9849-60e963daf952
 # ╠═1538327f-dc2a-494c-a146-d725f91c0a34
 # ╠═74413262-c13e-42c7-be41-6b8b829e9b5e
-# ╠═007e1141-4a33-4538-a089-b3238117af3d
+# ╟─affa28b6-8efe-41e3-a588-38851aa7903d
 # ╠═a00b4df5-e23c-4f1e-9188-c7305ca3bf1d
 # ╠═a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
 # ╠═299b6f3b-1181-4059-ba2f-c53a6b6477fa
 # ╠═bfea9c06-0ac7-4810-8a3b-9819c9f019e9
+# ╟─cb54ec24-8a02-4f3a-99fd-9ae1a98d73e0
 # ╠═1be2b0ac-39c0-467f-8a27-eae0b176c753
-# ╠═de4f4352-aa74-4c25-8fb3-cfc41c3354e6
-# ╠═61fddba8-ec75-44c0-ab1e-a91967843075
-# ╠═371c28b5-90e0-4f69-ac9b-e706fe960d07
-# ╠═573c07ba-2c7a-4b95-9ed6-dd0563c257e5
-# ╟─545a3bc2-f399-41eb-99fc-1ea40239d856
-# ╠═387f5555-c3f3-4b80-849d-8d65491fc6f8
-# ╠═935faa9d-990d-4bfa-b70c-b11bc824e20b
 # ╟─180b7edb-e029-49f7-b301-787b2a71a138
 # ╠═672f4800-bada-484b-b6f7-43c38106cec0
 # ╠═b67f393d-2cd4-4f97-88d3-accf7da3d79a
