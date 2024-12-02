@@ -36,30 +36,94 @@ md""" # Objective mapping with `BLUEs.jl` and  `AlgebraicArrays.jl`"""
 
 # ╔═╡ de4be099-b717-48c1-a713-4e0bb785953e
 # BLUES.jl: handles linear algebra of Gauss-Markov method
-
-# ╔═╡ f7d5d76f-189f-4783-88bb-352978524c4a
 # AlgebraicArrays.jl: handles translation between 2D grid and linear algebra matrices and vectors
 
 # ╔═╡ 7d13a231-8ee5-459b-9c0e-dd81ab87bda1
 md""" ## 2D objective map of sea surface height """
 
-# ╔═╡ e3b69a7f-cad0-4535-b691-a2d53c586581
-km = u"km" # for the grid size
-
-# ╔═╡ 8d49fedf-1bf6-45cb-b85b-8b438663452e
-cm = u"cm" # for SSH (mapped variable)
+# ╔═╡ b3392f99-d4a9-407a-a347-94b60cc9ae6e
+md"""### Parameters of the problem """
 
 # ╔═╡ 892694bf-e8ef-4a34-9239-394754b75a16
 Nx = 50 # number of gridpoint in first (zonal) direction
 
-# ╔═╡ 11f890ef-3091-4886-834c-51e2e619228a
-ΔX = 1000km # domain size in zonal direction
-
 # ╔═╡ 5d0dc6b4-24e1-413f-8790-33d6610e09e6
 Ny = 40 # number of gridpoints in second (meridional) direction
 
+# ╔═╡ 6510d727-5612-4605-9f35-9ce8eda98f02
+Nobs = 20 # number of observations
+
+# ╔═╡ ae71056a-3520-415a-9962-9e953a32780b
+md""" ### jumping right into it, the results """
+
+# ╔═╡ 7e677e5a-7b3e-4d9a-8bf4-e8bbd986fc6b
+md""" ### make the grid """
+
+# ╔═╡ 767418fa-ed77-4835-8c5c-0cc89d8d71bc
+# Here I need to produce some "synthetic" data
+# these are the extra steps
+
+# ╔═╡ df917296-aab3-424a-9371-0ba849c51189
+@dim Obs "observations"
+
+# ╔═╡ b917adee-6145-4766-bc5d-ca53d31da582
+function interpolate_bilinearly(x::VectorArray, locations::DimensionalData.Dimension)
+	y = zeros(eltype(x), locations, :VectorArray)
+ 	for (i, o) in enumerate(locations)
+		y[i] += interpolate_bilinearly(x, o)	
+	end
+	return y
+end
+
+# ╔═╡ 137af3c0-d802-4752-897c-f800fe635a4d
+# boilerplate function to extend from `VectorArray`s to `MatrixArray`s
+function interpolate_bilinearly(P::MatrixArray, locations::DimensionalData.Dimension) 
+    T = typeof(parent(interpolate_bilinearly(first(P), locations)))
+    Pyx = Array{T}(undef,size(P))
+    for i in eachindex(P)
+        Pyx[i] = parent(interpolate_bilinearly(P[i], locations))
+    end
+    return  MatrixArray(DimArray(Pyx, domaindims(P)))
+end
+
+# ╔═╡ a00b4df5-e23c-4f1e-9188-c7305ca3bf1d
+## Now we have synthetic observations
+# Let's see if the true solution can be backed out from the sparse obs.
+
+# ╔═╡ 545a3bc2-f399-41eb-99fc-1ea40239d856
+md""" ## how well is the data fit? """
+
+# ╔═╡ 180b7edb-e029-49f7-b301-787b2a71a138
+md""" ### set up the physical units in the problem"""
+
+# ╔═╡ 672f4800-bada-484b-b6f7-43c38106cec0
+km = u"km" # for the grid size
+
+# ╔═╡ 0828e154-50ba-4dee-be43-df880e34ab1b
+# set correlation lengthscales
+Lx = 300km
+
+# ╔═╡ 14b2c84e-78c1-459b-8c50-e0b54e4e533c
+Ly = 100km
+
+# ╔═╡ 11f890ef-3091-4886-834c-51e2e619228a
+ΔX = 1000km # domain size in zonal direction
+
 # ╔═╡ f9bda6f5-97e4-4ea5-9e7a-8826b528dd41
 ΔY = 500km
+
+# ╔═╡ bdafc085-e15e-4130-bca1-7abf5e724025
+robs = [(ΔX*rand(),ΔY*rand()) for i in 1:Nobs ] # uniformly sampled
+
+# ╔═╡ 6c97f8e0-e814-4e6f-9421-62b546de821e
+SSH_obs = Obs(robs)
+
+# ╔═╡ 1538327f-dc2a-494c-a146-d725f91c0a34
+# add the data to the plot
+rxobs = first.(robs) #[robs[oo][1] for oo in eachindex(robs)]
+
+# ╔═╡ 74413262-c13e-42c7-be41-6b8b829e9b5e
+ryobs = last.(robs) # [robs[oo][2] for oo in eachindex(robs)]
 
 # ╔═╡ ae3a2af0-8fae-11ee-288d-732288c2bc04
 # make grid axis number 1
@@ -72,17 +136,13 @@ ry = range(0km,ΔY,length=Ny)  # grid axis number 2: meridional distance
 Grid = (X(rx),Y(ry))
 
 # ╔═╡ 7dc54541-0664-464b-92fa-901e7ed512b6
-# diagonal elements of uncertainty matrix
+# diagonal elements of first-guess uncertainty matrix
 # nonzero for stability of Cholesky decomposition
 Rρ_diag = fill(1e-6, Grid, :VectorArray)
 
 # ╔═╡ f8b54566-c037-4c9d-b151-a4fd2ac2b76e
 # diagonal `MatrixArray` to precondition matrix for stability
 Rρ = Diagonal(Rρ_diag)
-
-# ╔═╡ 0828e154-50ba-4dee-be43-df880e34ab1b
-# set lengthscales
-Lx = 300km; Ly = 100km;
 
 # ╔═╡ d022a766-657e-4566-a3de-7d25a4810d74
 # first two loops for the grid location referenced in the columns of Rρ
@@ -99,6 +159,13 @@ for (icol,rxcol) in enumerate(first(Grid))
 	end	
 end
 
+# ╔═╡ f5a4bdbe-863c-4397-a163-c547b397c46c
+begin
+	# `cholesky` not yet implemented in AlgebraicArrays
+	# here's a workaround
+	Rρ12 = AlgebraicArray(cholesky(Matrix(Rρ)).U, Grid, Grid) # cholesky 
+end
+
 # ╔═╡ a42f66cb-3dc1-46cb-be94-38979d815d78
 begin
 	# correlation map
@@ -112,40 +179,6 @@ begin
 		ylabel="Y",
 		xlabel="X") 
 end
-
-# ╔═╡ 12028e54-7bda-41ab-b1a6-916f1e2619ca
-# turn correlation matrix into autocovariance matrix: requires variance info
-σx = 50.0cm # created a difficult-to-find error if this is an integer (!!)
-
-# ╔═╡ 767418fa-ed77-4835-8c5c-0cc89d8d71bc
-# Here I need to produce some "synthetic" data
-# these are the extra steps
-
-# ╔═╡ f5a4bdbe-863c-4397-a163-c547b397c46c
-begin
-	# `cholesky` not yet implemented in AlgebraicArrays
-	# here's a workaround
-	Rρ12 = AlgebraicArray(cholesky(Matrix(Rρ)).U, Grid, Grid) # cholesky 
-end
-
-# ╔═╡ 38b8e924-6ec1-41f0-a972-756ce1c5cd4d
-# xtrue = √σ²*Rρ12.L*randn(Grid) # this would be proper if Cholesky factorization existed for `MatrixArray`
-xtrue = σx*transpose(Rρ12)*randn(Grid, :VectorArray)
-
-# ╔═╡ 0f7fbda2-cb2a-42ed-a345-0686486fe4c1
-contourf(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,cbar=true,title="true SSH")
-
-# ╔═╡ 6510d727-5612-4605-9f35-9ce8eda98f02
-Nobs = 20 # number of observations
-
-# ╔═╡ bdafc085-e15e-4130-bca1-7abf5e724025
-robs = [(ΔX*rand(),ΔY*rand()) for i in 1:Nobs ] # uniformly sampled
-
-# ╔═╡ df917296-aab3-424a-9371-0ba849c51189
-@dim Obs "observations"
-
-# ╔═╡ 6c97f8e0-e814-4e6f-9421-62b546de821e
-SSH_obs = Obs(robs)
 
 # ╔═╡ 9cc0fcc8-c92f-411b-9ab4-cccfbe73be61
 """
@@ -183,35 +216,40 @@ function interpolate_bilinearly(x::VectorArray, location::Tuple)
 	return obs
 end
 
-# ╔═╡ b917adee-6145-4766-bc5d-ca53d31da582
-function interpolate_bilinearly(x::VectorArray, locations::DimensionalData.Dimension)
-	y = zeros(eltype(x), locations, :VectorArray)
- 	for (i, o) in enumerate(locations)
-		y[i] += interpolate_bilinearly(x, o)	
-	end
-	return y
-end
+# ╔═╡ dcd92fb1-33aa-43f7-b0aa-396df9faf4de
+# check that each observation is one when truth is one (bilinear interpolation is a true average)
+all(isapprox.(interpolate_bilinearly( ones(Grid, :VectorArray), SSH_obs), 1.0))
+
+# ╔═╡ bfea9c06-0ac7-4810-8a3b-9819c9f019e9
+# solve with `combine`; it expects a function with just one argument
+predict_obs(x0) = interpolate_bilinearly(x0, SSH_obs)
+
+# ╔═╡ b67f393d-2cd4-4f97-88d3-accf7da3d79a
+cm = u"cm" # for SSH (mapped variable)
+
+# ╔═╡ 12028e54-7bda-41ab-b1a6-916f1e2619ca
+# turn correlation matrix into autocovariance matrix: requires variance info
+σx = 50.0cm # created a difficult-to-find error if this is an integer (!!)
+
+# ╔═╡ 38b8e924-6ec1-41f0-a972-756ce1c5cd4d
+# xtrue = √σ²*Rρ12.L*randn(Grid) # this would be proper if Cholesky factorization existed for `MatrixArray`
+xtrue = σx*transpose(Rρ12)*randn(Grid, :VectorArray)
+
+# ╔═╡ 0f7fbda2-cb2a-42ed-a345-0686486fe4c1
+contourf(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,cbar=true,title="true SSH")
 
 # ╔═╡ 52d1e4d2-86b0-4aa6-8a9c-532e1cafa3c1
 zeros(eltype(xtrue),dims(SSH_obs),:VectorArray)
 
-# ╔═╡ 137af3c0-d802-4752-897c-f800fe635a4d
-# boilerplate function to extend from `VectorArray`s to `MatrixArray`s
-function interpolate_bilinearly(P::MatrixArray, locations::DimensionalData.Dimension) 
-    T = typeof(parent(interpolate_bilinearly(first(P), locations)))
-    Pyx = Array{T}(undef,size(P))
-    for i in eachindex(P)
-        Pyx[i] = parent(interpolate_bilinearly(P[i], locations))
-    end
-    return  MatrixArray(DimArray(Pyx, domaindims(P)))
-end
-
 # ╔═╡ 54228f3e-1291-4d8e-8fc9-f3a8a44085de
 ytrue = interpolate_bilinearly(xtrue, SSH_obs) # perfect observations
 
-# ╔═╡ dcd92fb1-33aa-43f7-b0aa-396df9faf4de
-# check that each observation is one when truth is one (bilinear interpolation is a true average)
-all(isapprox.(interpolate_bilinearly( ones(Grid, :VectorArray), SSH_obs), 1.0))
+# ╔═╡ a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
+#use `BLUEs.jl` to package as an `Estimate`
+x0vals = zeros(eltype(xtrue), Grid, :VectorArray) # first guess
+
+# ╔═╡ 299b6f3b-1181-4059-ba2f-c53a6b6477fa
+x0 = Estimate(x0vals, σx^2 * Rρ)
 
 # ╔═╡ 93168c75-eeba-4b64-9054-35981c93701b
 # how much observational noise?
@@ -230,48 +268,17 @@ ycontaminated = ytrue + n
 # ╔═╡ 8e6032a0-0de4-4fef-9849-60e963daf952
 y = Estimate(ycontaminated, yerr) # bundle observations and uncertainty
 
-# ╔═╡ 1538327f-dc2a-494c-a146-d725f91c0a34
-# add the data to the plot
-rxobs = first.(robs) #[robs[oo][1] for oo in eachindex(robs)]
-
-# ╔═╡ 74413262-c13e-42c7-be41-6b8b829e9b5e
-ryobs = last.(robs) # [robs[oo][2] for oo in eachindex(robs)]
-
 # ╔═╡ 007e1141-4a33-4538-a089-b3238117af3d
 begin
 	contour(rx,ry,transpose(parent(xtrue)),xlabel="zonal distance",ylabel="meridional distance",clabels=true,title="true SSH with $Nobs obs",fill=true)
 	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",cbar=false,markersize=6) 
 end
 
-# ╔═╡ a00b4df5-e23c-4f1e-9188-c7305ca3bf1d
-## Now we have synthetic observations
-# Let's see if the true solution can be backed out from the sparse obs.
-
-# ╔═╡ a8832dcd-ce4f-4967-8ed7-5c24d05c7a95
-#use `BLUEs.jl` to package as an `Estimate`
-x0vals = zeros(eltype(xtrue), Grid, :VectorArray) # first guess
-
-# ╔═╡ 299b6f3b-1181-4059-ba2f-c53a6b6477fa
-x0 = Estimate(x0vals, σx^2 * Rρ)
-
-# ╔═╡ bfea9c06-0ac7-4810-8a3b-9819c9f019e9
-# solve with `combine`; it expects a function with just one argument
-predict_obs(x0) = interpolate_bilinearly(x0, SSH_obs)
-
 # ╔═╡ 1be2b0ac-39c0-467f-8a27-eae0b176c753
 x̃ = combine(x0, y, predict_obs)
 
-# ╔═╡ de4f4352-aa74-4c25-8fb3-cfc41c3354e6
-dims(y.v)
-
 # ╔═╡ 61fddba8-ec75-44c0-ab1e-a91967843075
 x̃field = reshape(x̃.v,Nx,Ny) # turn it back into 2D
-
-# ╔═╡ 371c28b5-90e0-4f69-ac9b-e706fe960d07
-begin
-	contourf(rx,ry,x̃field',xlabel="zonal distance",ylabel="meridional distance",title="SSH objective map")
-	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",ms=6,cbar=false) 
-end
 
 # ╔═╡ 573c07ba-2c7a-4b95-9ed6-dd0563c257e5
 begin
@@ -279,8 +286,14 @@ begin
 	scatter!(rxobs,ryobs,color=:white,label="y",ms=6) 
 end
 
-# ╔═╡ 545a3bc2-f399-41eb-99fc-1ea40239d856
-md""" ## how well is the data fit? """
+# ╔═╡ de4f4352-aa74-4c25-8fb3-cfc41c3354e6
+dims(y.v)
+
+# ╔═╡ 371c28b5-90e0-4f69-ac9b-e706fe960d07
+begin
+	contourf(rx,ry,x̃field',xlabel="zonal distance",ylabel="meridional distance",title="SSH objective map")
+	scatter!(rxobs,ryobs,zcolor=ustrip.(y.v),label="y",ms=6,cbar=false) 
+end
 
 # ╔═╡ 387f5555-c3f3-4b80-849d-8d65491fc6f8
 scatter(y.v,predict_obs(x̃.v),xlabel="y",ylabel="ỹ")
@@ -288,34 +301,38 @@ scatter(y.v,predict_obs(x̃.v),xlabel="y",ylabel="ỹ")
 # ╔═╡ 935faa9d-990d-4bfa-b70c-b11bc824e20b
 scatter(y.v,y.v-predict_obs(x̃.v),xlabel="y",ylabel="ñ")
 
+# ╔═╡ c406a8d6-674e-4f38-9944-186664a3de8b
+md""" ### package management """
+
 # ╔═╡ f9975f99-3795-4f7e-95ea-fb0ce894d4ec
 plotly()
 
 # ╔═╡ Cell order:
 # ╟─a72352ab-cdfb-42db-85de-ea88132ba9dd
 # ╠═de4be099-b717-48c1-a713-4e0bb785953e
-# ╠═f7d5d76f-189f-4783-88bb-352978524c4a
 # ╟─7d13a231-8ee5-459b-9c0e-dd81ab87bda1
-# ╠═e3b69a7f-cad0-4535-b691-a2d53c586581
-# ╠═8d49fedf-1bf6-45cb-b85b-8b438663452e
+# ╟─b3392f99-d4a9-407a-a347-94b60cc9ae6e
+# ╠═0828e154-50ba-4dee-be43-df880e34ab1b
+# ╠═14b2c84e-78c1-459b-8c50-e0b54e4e533c
 # ╠═892694bf-e8ef-4a34-9239-394754b75a16
 # ╠═11f890ef-3091-4886-834c-51e2e619228a
 # ╠═5d0dc6b4-24e1-413f-8790-33d6610e09e6
 # ╠═f9bda6f5-97e4-4ea5-9e7a-8826b528dd41
+# ╠═6510d727-5612-4605-9f35-9ce8eda98f02
+# ╠═12028e54-7bda-41ab-b1a6-916f1e2619ca
+# ╟─ae71056a-3520-415a-9962-9e953a32780b
+# ╠═0f7fbda2-cb2a-42ed-a345-0686486fe4c1
+# ╟─7e677e5a-7b3e-4d9a-8bf4-e8bbd986fc6b
 # ╠═ae3a2af0-8fae-11ee-288d-732288c2bc04
 # ╠═28a84a7a-36b8-4319-9eed-693491723f6d
 # ╠═444a8791-93f8-4ba1-906f-858d365092f7
 # ╠═7dc54541-0664-464b-92fa-901e7ed512b6
 # ╠═f8b54566-c037-4c9d-b151-a4fd2ac2b76e
 # ╠═d022a766-657e-4566-a3de-7d25a4810d74
-# ╠═0828e154-50ba-4dee-be43-df880e34ab1b
 # ╠═a42f66cb-3dc1-46cb-be94-38979d815d78
-# ╠═12028e54-7bda-41ab-b1a6-916f1e2619ca
 # ╠═767418fa-ed77-4835-8c5c-0cc89d8d71bc
 # ╠═f5a4bdbe-863c-4397-a163-c547b397c46c
 # ╠═38b8e924-6ec1-41f0-a972-756ce1c5cd4d
-# ╠═0f7fbda2-cb2a-42ed-a345-0686486fe4c1
-# ╠═6510d727-5612-4605-9f35-9ce8eda98f02
 # ╠═bdafc085-e15e-4130-bca1-7abf5e724025
 # ╠═df917296-aab3-424a-9371-0ba849c51189
 # ╠═6c97f8e0-e814-4e6f-9421-62b546de821e
@@ -345,6 +362,10 @@ plotly()
 # ╟─545a3bc2-f399-41eb-99fc-1ea40239d856
 # ╠═387f5555-c3f3-4b80-849d-8d65491fc6f8
 # ╠═935faa9d-990d-4bfa-b70c-b11bc824e20b
+# ╟─180b7edb-e029-49f7-b301-787b2a71a138
+# ╠═672f4800-bada-484b-b6f7-43c38106cec0
+# ╠═b67f393d-2cd4-4f97-88d3-accf7da3d79a
+# ╟─c406a8d6-674e-4f38-9944-186664a3de8b
 # ╠═84a3f486-6566-4dad-99f0-944d8b67f6a0
 # ╠═82de0964-3a0a-4580-bb83-b8d43a9e7d1b
 # ╠═71178a40-391d-4abc-8a7a-d03c90c28952
