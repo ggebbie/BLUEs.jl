@@ -1,7 +1,7 @@
 name = "BLUEs"
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
-version = "0.2.4"
+version = "0.2.5"
 
 [deps]
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
