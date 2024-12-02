@@ -3,6 +3,13 @@
     MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
     VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
 
+    if use_units
+        @testset "objective mapping with DimensionalData and AlgebraicArrays" begin
+	    include("test_objective_mapping_AlgebraicArrays.jl")
+        end
+    end
+    
+    
     @testset "uniform state vectors" begin
 
         # fixed parameters
