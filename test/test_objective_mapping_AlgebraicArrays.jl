@@ -1,5 +1,5 @@
-Nx = 50 # number of gridpoint in first (zonal) direction
-Ny = 40 # number of gridpoints in second (meridional) direction
+Nx = 20 # 50 # number of gridpoint in first (zonal) direction
+Ny = 10 # 40 # number of gridpoints in second (meridional) direction
 Nobs = 20 # number of observations
 @dim Obs "observations"
 

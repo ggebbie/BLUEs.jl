@@ -257,6 +257,12 @@ end
 
 end
 
+@testset "problem 4.3, objective mapping without AlgebraicArrays" begin
+    if use_units
+        include("test_objective_mapping_BLUEs.jl")
+    end
+end
+
 # additional problem: 5.1 model of exponential decay
 # Not implemented/tested for `combine` function of two Estimates.
 @testset "overdetermined named tuple E,y" begin
