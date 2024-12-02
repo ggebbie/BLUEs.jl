@@ -36,6 +36,9 @@ end
 # if two vectors are provided, assume it is the standard error 
 Estimate(v::AbstractVector, sigma::AbstractVector) = Estimate(v, Diagonal(sigma.^2))
 
+# allow scalar estimates and scalar standard errors to be `Estimate`s
+Estimate(v::T, sigma::T) where T <: Number = Estimate([v], [sigma^2;;])
+
 # translate Vector{Measurement} to Estimate
 # let it error rather than restricting types at compile-time
 function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity{<:Measurement}} 
