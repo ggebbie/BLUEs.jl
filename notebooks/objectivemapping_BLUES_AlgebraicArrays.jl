@@ -116,7 +116,7 @@ km = u"km" # for the grid size
 
 # ╔═╡ 0828e154-50ba-4dee-be43-df880e34ab1b
 # set correlation lengthscales
-Lx = 300km 
+Lx = 450km 
 
 # ╔═╡ 14b2c84e-78c1-459b-8c50-e0b54e4e533c
 Ly = 100km
