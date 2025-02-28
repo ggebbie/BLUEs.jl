@@ -46,11 +46,19 @@ z = combine(x, y)
 	
 - Operations can be performed on arbitrary `AlgebraicArray`s using the AlgebraicArrays.jl package.
 	
-- This package consistently composes with `DimArray`s from DimensionalData.jl including for coefficients.
+    Consistently composes with `DimArray`s, including for coefficients
 	
-- `combine` does not require the observational operation to be in linear or matrix form. It currently accepts a Function argument which makes a priori impulse reponse calculations unnecessary.
+    `combine` does not require the observational operation to be in linear or matrix form. It currently accepts a Function argument which makes a priori impulse reponse calculations unnecessary.
 
-- Units are included in an extension and are optional.
+## Examples
+
+Three objective mapping notebooks now exist in the notebooks branch.
+
+- `2.9_objectivemapping.jl` - pedagogical example from Dynamical Insights From Data class
+
+- `objectivemapping_blues.jl` - objective mapping that uses BLUEs to solve the Gauss-Markov problem
+
+- `objectivemapping_BLUES_AlgebraicArrays.jl` - full featured notebook using whole ecosystem, including BLUEs for the Gauss-Markov problem, AlgebraicArrays.jl to handle conversion from a 2D grid to matrices and vectors, and DimensionalData.jl for labeling the variables.
 
 ## Future features:
 
