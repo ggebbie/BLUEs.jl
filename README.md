@@ -18,7 +18,16 @@ Best Linear Unbiased Estimators. I guess that's why they call them the BLUEs.
     Consistently composes with `DimArray`s, including for coefficients
 	
     `combine` does not require the observational operation to be in linear or matrix form. It currently accepts a Function argument which makes a priori impulse reponse calculations unnecessary.
-	
+
+## Examples
+
+Three objective mapping notebooks now exist in the notebooks branch.
+
+- `2.9_objectivemapping.jl` - pedagogical example from Dynamical Insights From Data class
+
+- `objectivemapping_blues.jl` - objective mapping that uses BLUEs to solve the Gauss-Markov problem
+
+- `objectivemapping_BLUES_AlgebraicArrays.jl` - full featured notebook using whole ecosystem, including BLUEs for the Gauss-Markov problem, AlgebraicArrays.jl to handle conversion from a 2D grid to matrices and vectors, and DimensionalData.jl for labeling the variables.
 
 ## Future features:
 
