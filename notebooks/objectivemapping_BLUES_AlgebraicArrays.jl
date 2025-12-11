@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.3
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
@@ -150,6 +150,9 @@ ry = range(0km,ΔY,length=Ny)  # grid axis number 2: meridional distance
 # ╔═╡ 444a8791-93f8-4ba1-906f-858d365092f7
 Grid = (X(rx),Y(ry))
 
+# ╔═╡ c5f7557d-adb2-4568-8e63-4759e2f6a8e1
+typeof(Grid)
+
 # ╔═╡ 7dc54541-0664-464b-92fa-901e7ed512b6
 # diagonal elements of first-guess uncertainty matrix
 # nonzero for stability of Cholesky decomposition
@@ -245,7 +248,7 @@ cm = u"cm" # for SSH (mapped variable)
 
 # ╔═╡ 12028e54-7bda-41ab-b1a6-916f1e2619ca
 # turn correlation matrix into autocovariance matrix: requires variance info
-σx = 50.0cm # created a difficult-to-find error if this is an integer (!!)
+σx = 30.0cm # created a difficult-to-find error if this is an integer (!!)
 
 # ╔═╡ 38b8e924-6ec1-41f0-a972-756ce1c5cd4d
 # xtrue = √σ²*Rρ12.L*randn(Grid) # this would be proper if Cholesky factorization existed for `MatrixArray`
@@ -383,6 +386,7 @@ plotly()
 # ╠═ae3a2af0-8fae-11ee-288d-732288c2bc04
 # ╠═28a84a7a-36b8-4319-9eed-693491723f6d
 # ╠═444a8791-93f8-4ba1-906f-858d365092f7
+# ╠═c5f7557d-adb2-4568-8e63-4759e2f6a8e1
 # ╟─d1a99581-7505-49f3-9184-db5278de12a4
 # ╠═7dc54541-0664-464b-92fa-901e7ed512b6
 # ╠═f8b54566-c037-4c9d-b151-a4fd2ac2b76e

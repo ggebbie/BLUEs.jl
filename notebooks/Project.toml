@@ -15,3 +15,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[sources]
+AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
+BLUEs = {path = ".."}
