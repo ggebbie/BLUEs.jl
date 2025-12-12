@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "7797f605593b1716348676a821dab0e4d410d6bb"
+project_hash = "5914da998d03ec52c15030dd9ab08d39397812f5"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -91,7 +91,7 @@ version = "1.11.0"
 deps = ["AlgebraicArrays", "DimensionalData", "LinearAlgebra", "Measurements", "Revise", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
 path = "."
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.2.5"
+version = "0.2.6"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -659,9 +659,9 @@ version = "1.27.0"
 
 [[deps.UnitfulLinearAlgebra]]
 deps = ["DimensionalData", "LinearAlgebra", "Statistics", "Unitful"]
-git-tree-sha1 = "13d20107ca641ef069537b91e66b219c70e7ac74"
+git-tree-sha1 = "cac19d557004c919ceb7036585503cb166af4b64"
 uuid = "c14bd059-d406-4571-8f61-9bd20e53c30b"
-version = "0.4.3"
+version = "0.5.3"
 
     [deps.UnitfulLinearAlgebra.extensions]
     UnitfulLinearAlgebraLatexifyExt = ["Latexify", "UnitfulLatexify"]
