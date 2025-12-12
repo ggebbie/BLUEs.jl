@@ -1,5 +1,9 @@
 @testset "unitful linear algebra" begin
 
+using UnitfulLinearAlgebra
+
+
+
     @testset "trend analysis: left-uniform matrix" begin
 
         M = 10  # number of obs
