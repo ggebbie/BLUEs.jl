@@ -1,3 +1,39 @@
+using DimensionalData
+using DimensionalData:@dim
+
+# set necessary functions first (may get overwritten and complain)
+
+function source_water_matrix_with_lag(surfaceregions,lags)
+    yr = u"yr"
+    K = u"K"
+    Mparent = rand(length(lags),length(surfaceregions))#*100percent
+    # normalize to conserve mass
+    for nrow = 1:size(Mparent,1)
+        Mparent /= sum(Mparent)
+    end
+    return M = DimArray(Mparent,(Ti(lags),SurfaceRegion(surfaceregions)))
+end
+
+function source_water_solution(surfaceregions,years)
+    yr = u"yr"
+    K = u"K"
+    m = length(years)
+    n = length(surfaceregions)
+    x = VectorArray(DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions))))
+    return x
+end
+
+function source_water_solution(surfaceregions, years, statevar)
+    yr = u"yr"
+    K = u"K"
+    permil = u"permille"
+    m = length(years)
+    n = length(surfaceregions)
+    mat = cat(randn(m, n, 1)K, randn(m, n, 1)permil; dims = 3)
+    x = VectorArray(DimArray(mat, (Ti(years), SurfaceRegion(surfaceregions), StateVariable(statevar))))
+    return x
+end
+
 @testset "dimensional data" begin
 
     MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
@@ -32,8 +68,8 @@
         # define (statevars,timeseries,lag)
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
-        (statevars,timeseries,lag) = cases[1] # for interactive use
-        
+        # for interactive use, 1 test fails if all cases are run, is this intended?
+        (statevars,timeseries,lag) = cases[1]
         println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
         #define constants
@@ -44,7 +80,6 @@
 
         # take all years or just the end year
         timeseries ? yrs = years : yrs = [years[end]]
-
         M = source_water_matrix_with_lag(surfaceregions,lags)
 
         # Step 1: get synthetic solution
@@ -59,11 +94,8 @@
         else
             x = ustrip.(x) # extra step: remove units
             d = VectorArray(fill(ustrip.(σₓ),dims(x)))
-            #x₀ = 0.0 * x #zeros(dims(x),:VectorArray)
-            #d  = AlgebraicArray(fill(ustrip.(σₓ)^2,size(x)),dims(x))
         end
         x₀ = 0.0 * x #zeros(dims(x),:VectorArray) .* unit.(x)
-        #Px0 = Diagonal(d)
         x0 = Estimate( x₀, d)
                     
         global observe(x) = convolve(x,M)
@@ -73,10 +105,8 @@
         ytrue = observe(x)
         ny = length(ytrue)
         if use_units
-            #Py  = VectorArray(fill(ustrip.(σn)^2,length(ytrue)), rangedims(ytrue)).*unit.(ytrue)
             d  = VectorArray(fill(σn, rangedims(ytrue)))
         else
-            #Py  = VectorArray(fill(ustrip.(σn)^2,length(ytrue)), rangedims(ytrue))
             d  = VectorArray(fill(ustrip.(σn), rangedims(ytrue)))
         end
         y = Estimate( ytrue, d)
@@ -92,7 +122,6 @@
         # check whether obs are reproduced
         ytilde = observe(x1.v)
         @test isapprox(y.v,ytilde,rtol= 1e-2) 
-
     end
 
     # consider adding following experiments
@@ -139,7 +168,6 @@
                 M = source_water_matrix_with_lag(surfaceregions,lags)
 
                 # Step 1: get synthetic solution
-
                 x = source_water_solution(surfaceregions, yrs, statevariables)
                 coeffs = DimArray(rand(2).*[permil/K,NoUnits], StateVariable(statevariables))
                 x = ustrip.(x) # extra step: remove units
@@ -154,9 +182,6 @@
                     global observe(x) = convolve(x,M,Tx,coeffs)
                 elseif statevars
                     global observe(x) = convolve(x,M,coeffs)
-                    # elseif timeseries
-                    #     Tx = first(dims(x)) # timeseries of observations at these times
-                    #     global observe(x) = convolve(x,M,Tx)
                 else
                     global observe(x) = convolve(x,M)
                 end

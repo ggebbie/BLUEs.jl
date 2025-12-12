@@ -1,5 +1,6 @@
 @testset "algebraic arrays constructors" begin
     using Measurements
+    using AlgebraicArrays 
 
     # A scalar like N = 1 is not relevant here, would not need VectorArray 
     Nlist = [(1,1,1),(2,3)] # grid of obs

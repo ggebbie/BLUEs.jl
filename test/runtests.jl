@@ -7,15 +7,11 @@ using Unitful
 # using UnitfulLinearAlgebra
 # using ToeplitzMatrices
 # using SparseArrays
-# using DimensionalData
-# using DimensionalData:@dim
-# using AlgebraicArrays 
 const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
 const permil = Unitful.FixedUnits(u"permille")
 
 ENV["UNITFUL_FANCY_EXPONENTS"] = true
 
-# requires Revise
 # includet("test_functions.jl")
 
 @testset "BLUEs.jl" begin

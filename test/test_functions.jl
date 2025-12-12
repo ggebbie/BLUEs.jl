@@ -118,39 +118,6 @@ function source_water_matrix_vector_pair_with_lag(M)
     return E,x
 end
 
-function source_water_matrix_with_lag(surfaceregions,lags)
-    yr = u"yr"
-    K = u"K"
-    
-    Mparent = rand(length(lags),length(surfaceregions))#*100percent
-
-    # normalize to conserve mass
-    for nrow = 1:size(Mparent,1)
-        Mparent /= sum(Mparent)
-    end
-    
-    return M = DimArray(Mparent,(Ti(lags),SurfaceRegion(surfaceregions)))
-end
-
-function source_water_solution(surfaceregions,years)
-    yr = u"yr"
-    K = u"K"
-    m = length(years)
-    n = length(surfaceregions)
-    x = VectorArray(DimArray(randn(m,n)K,(Ti(years),SurfaceRegion(surfaceregions))))
-    return x
-end
-
-function source_water_solution(surfaceregions, years, statevar)
-    yr = u"yr"
-    K = u"K"
-    permil = u"permille"
-    m = length(years)
-    n = length(surfaceregions)
-    mat = cat(randn(m, n, 1)K, randn(m, n, 1)permil; dims = 3)
-    x = VectorArray(DimArray(mat, (Ti(years), SurfaceRegion(surfaceregions), StateVariable(statevar))))
-    return x
-end
 
 """
     function source_water_matrix_vector_pair_with_lag(M)
