@@ -8,13 +8,12 @@ using DimensionalData:AbstractDimVector
 using DimensionalData:@dim
 using AlgebraicArrays
 
-export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
+export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
-export predictobs, addcontrol, addcontrol!, flipped_mult
-#export DimEstimate
+export addcontrol, addcontrol!, flipped_mult
 
 import Base: show, getproperty, propertynames, *, +, -, \, sum
 import LinearAlgebra: pinv, transpose
@@ -78,19 +77,9 @@ standard_error(P::AbstractArray) = .√diag(P)
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        if x.P isa UnitfulDimMatrix # requires N = 2 where `diag` is defined
-        # assumes, does not check, that unitdims are consistent with diag of P 
-            return UnitfulDimMatrix(ustrip.(.√diag(x.P)),unitdims(x.v),dims=first(dims(x.P)))
-        else
-            return standard_error(x.P) # .√diag(x.P)
-        end
+        return standard_error(x.P) # .√diag(x.P)
     elseif d === :x
-        if x.v isa UnitfulDimMatrix # to accomodate previous block, perhaps need to expand to AbstractUnitfulType
-            tmp = measurement.(parent(x.v),parent(x.σ))
-            return UnitfulDimMatrix(tmp, unitdims(x.v), dims= dims(x.v))
-        else
-            return measurement.(x.v,x.σ)
-        end
+        return measurement.(x.v,x.σ)
     else
         return getfield(x, d)
     end
@@ -174,7 +163,6 @@ end
     unweighted `datacost`
 """
 function rmserror(x̃::Estimate, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
-#function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     return sqrt(n ⋅ n)
 end
@@ -186,7 +174,7 @@ end
     unweighted `controlcost`
 
     # Args 
-    -`x̃`: DimEstimate
+    -`x̃`: Estimate
     -`p`: problem
     -`dim3`: allows to access third dimension, which is assumed to be state var. dim.
 """
@@ -224,27 +212,19 @@ function impulseresponse(x₀,M)
 function impulseresponse(funk::Function,x,args...)
     u = Quantity.(zeros(length(x)),unit.(vec(x)))
     y₀ = funk(x,args...)
-    #Eunits = expectedunits(y₀,x)
-    #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
     Ep = zeros(length(y₀), length(x))
-    
     for rr in eachindex(x)
-        #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
             u = Quantity.(zeros(length(x)), unit.(vec(x)))
         else
             u = Quantity(0.0,unit(x))
         end
-        
         Δu = Quantity(1.0,unit.(x)[rr])
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        #println(y)
         if y isa AbstractDimArray
-            #Ep[:,rr] .= vec(parent((y - y₀)/Δu))
             Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
-   
         else
             tmp = ustrip.((y - y₀)/Δu)
             # getting ugly around here
@@ -271,15 +251,6 @@ function impulseresponse(funk::Function,x,args...)
         return UnitfulMatrix(Ep,vec(unit.(y₀)),vec(unit.(x)))
     end
 end
-
-"""
-    function predictobs(funk,x...)
-
-    Get observations derived from function `funk`
-    y = funk(x...)
-    Turns out to not be useful so far.
-"""
-predictobs(funk,x...) = funk(x...)
 
 function addcontrol(x₀::AbstractDimArray,u)
 
