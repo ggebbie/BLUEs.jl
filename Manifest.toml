@@ -34,11 +34,11 @@ version = "4.4.0"
 
 [[deps.AlgebraicArrays]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "7fe8b0e6397514023bcd8e474c62a8737ca802f4"
+git-tree-sha1 = "a96bb903eccb659d5bdc0ff3f59e1cd0ee853c76"
 repo-rev = "main"
 repo-url = "https://github.com/ggebbie/AlgebraicArrays.jl"
 uuid = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
-version = "1.0.9-DEV"
+version = "1.0.10-DEV"
 weakdeps = ["DimensionalData", "Unitful"]
 
     [deps.AlgebraicArrays.extensions]
