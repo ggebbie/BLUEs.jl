@@ -103,7 +103,7 @@ end
             
     # "underdetermined, problem 2.1" 
     Py  = Diagonal([σn.^2])
-    Px = Diagonal(ustrip.([γδ,γT].^-1))
+    Px = Diagonal([γδ,γT].^-1)
     x0 = Estimate(x₀, Px)
     y_estimate = Estimate(y, Py)
     x1 = combine(x0, y_estimate, E) # a BLUE
@@ -119,14 +119,8 @@ end
 
     # same answer both least-squares ways?
     @test cost(x̃2,uproblem) ≈ cost(x̃1,oproblem)
-
-    if use_units
-        @test isapprox(ustrip.(x1.v), ustrip.(x̃1.v))
-        @test isapprox(ustrip.(x1.σ), ustrip.(x̃1.σ))
-    else
-        @test isapprox(x1.v, x̃1.v)
-        @test isapprox(x1.σ, x̃1.σ)
-    end
+    @test isapprox(x1.v, x̃1.v)
+    @test isapprox(x1.σ, x̃1.σ)
 end
 
 @testset "polynomial fitting, problem 2.3" begin
@@ -136,8 +130,8 @@ end
     t = (1:M)
     E =hcat(t.^0, t, t.^2, t.^3)
     σy = 0.1
-    Py = Diagonal(fill(ustrip(σy^2),M))
-    Py⁻¹ = Diagonal(fill(ustrip(σy^-2),M))
+    Py = Diagonal(fill(σy^2,M))
+    Py⁻¹ = Diagonal(fill(σy^-2,M))
     γ = [1.0e1, 1.0e2, 1.0e3, 1.0e4]
     Px⁻¹ = Diagonal(γ)
     x₀ = zeros(N)
