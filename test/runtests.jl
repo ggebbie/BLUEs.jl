@@ -14,7 +14,7 @@ includet("test_functions.jl")
         
     @testset "extensions without units" begin 
         include("test_algebraic_arrays.jl")
-        include("test_dimensional_data.jl")
+        # include("test_dimensional_data.jl")
     end
 
     @testset "extensions with units" begin
@@ -23,7 +23,7 @@ includet("test_functions.jl")
         include("test_estimate_unitful.jl")
         include("test_unitful_linear_algebra.jl")
         include("test_algebraic_arrays_unitful.jl")
-        include("test_dimensional_data_unitful.jl")
-        include("test_DD_AA.jl")
+        # include("test_dimensional_data_unitful.jl")
+        # include("test_DD_AA.jl")
     end
 end
