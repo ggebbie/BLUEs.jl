@@ -1,8 +1,8 @@
 
-ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
-if !isnothing(ext)
-    RowVector = ext.RowVector
-end
+# ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
+# if !isnothing(ext)
+#     RowVector = ext.RowVector
+# end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)
@@ -114,4 +114,4 @@ function combine(x0::Estimate,y1::Estimate,E1::Function)
     return Estimate(v,P)
 end
 
-include("convolutions.jl")
+# include("convolutions.jl")

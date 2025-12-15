@@ -1,6 +1,6 @@
 name = "BLUEs"
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.2.7"
+version = "0.3.0"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
 
 [deps]
@@ -14,8 +14,14 @@ ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
+[weakdeps]
+AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
+
 [sources]
 AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
+
+[extensions]
+AlgebraicArraysExt = "AlgebraicArrays"
 
 [compat]
 DimensionalData = "0.29"
@@ -26,8 +32,10 @@ Unitful = "1"
 UnitfulLinearAlgebra = "0.5"
 julia = "1.10,1.11,1.12"
 
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 
 [targets]
 test = ["Test"]

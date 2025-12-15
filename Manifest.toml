@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "c9d15b946e5904f67f4c3efcfcdebf71f829fb16"
+project_hash = "066724603bb02abe7e27d844287fbaaeaf9f39bf"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -31,19 +31,6 @@ version = "4.4.0"
     [deps.Adapt.weakdeps]
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-
-[[deps.AlgebraicArrays]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "a96bb903eccb659d5bdc0ff3f59e1cd0ee853c76"
-repo-rev = "main"
-repo-url = "https://github.com/ggebbie/AlgebraicArrays.jl"
-uuid = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
-version = "1.0.10-DEV"
-weakdeps = ["DimensionalData", "Unitful"]
-
-    [deps.AlgebraicArrays.extensions]
-    AlgebraicArraysDimensionalDataExt = ["DimensionalData"]
-    AlgebraicArraysUnitfulExt = ["Unitful"]
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -88,10 +75,16 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
 [[deps.BLUEs]]
-deps = ["AlgebraicArrays", "DimensionalData", "LinearAlgebra", "Measurements", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
+deps = ["DimensionalData", "LinearAlgebra", "Measurements", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
 path = "."
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.2.6"
+version = "0.3.0"
+
+    [deps.BLUEs.extensions]
+    AlgebraicArraysExt = "AlgebraicArrays"
+
+    [deps.BLUEs.weakdeps]
+    AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"

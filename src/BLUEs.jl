@@ -6,7 +6,7 @@ using DimensionalData:AbstractDimArray
 using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
 using DimensionalData:@dim
-using AlgebraicArrays
+# using AlgebraicArrays           # 
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
@@ -46,11 +46,10 @@ function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity
         return Estimate(vval, verr) # just provide standard error
 end 
 
-#include("dim_estimate.jl")
 include("base.jl")
 include("unitful.jl")
-include("algebraic_arrays.jl")
-include("unitful_algebraic_arrays.jl")
+# include("algebraic_arrays.jl")
+# include("unitful_algebraic_arrays.jl")
 include("dimensional_data.jl")
 include("blockdim.jl")
 include("overdetermined_problem.jl")
