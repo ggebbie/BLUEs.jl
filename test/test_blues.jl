@@ -5,38 +5,7 @@
     Mlist = (1,5)
     for M in Mlist
         a = randn(M) .± rand(M)
-                E = randn(M,M)
-        aval = Measurements.value.(a)
-        aerr = Measurements.uncertainty.(a);
-
-        # allow scalar input to Estimate constructor 
-        x9 = Estimate(first(aval), first(aerr))
-
-        x0 = Estimate(Measurements.value.(a),
-            Diagonal(aerr.^2))
-        x  = Estimate(aval, aerr) # just provide standard error
-        x1  = Estimate(a) # just provide Vector{Measurement}
-
-        @test   isequal(x.v, x0.v)
-        @test   isequal(x.P, x0.P)
-        @test   isequal(x1.v, x0.v)
-        @test   isequal(x1.P, x0.P)
-        @test Measurements.value.(E*a) ≈ (E*x).v
-        @test Measurements.uncertainty.(E*a) ≈ (E*x).σ
-
-        # combine two estimates
-        xplus = combine(x,x,alg=:underdetermined)
-        # error should decrease by 70%
-        @test sum( xplus.σ./x.σ .< 0.8) == M
-        # central estimate should not change
-        @test isapprox( xplus.v, x.v )
-
-        # combine two estimates another way
-        xplus2 = combine(x,x,alg=:overdetermined)
-        # error should decrease by 70%
-        @test sum( xplus2.σ./x.σ .< 0.8) == M
-        # central estimate should not change
-        @test isapprox( xplus2.v, x.v )
+        error_propagation(a)
     end
 end
 
@@ -124,7 +93,6 @@ end
 end
 
 @testset "polynomial fitting, problem 2.3" begin
-
     M = 50
     N = 4 
     t = (1:M)
@@ -181,3 +149,29 @@ end
     @test x ≈ x̃.v # no noise in obs
     @test cost(x̃,problem) < 1e-5 # no noise in obs
 end
+
+@testset "objective mapping, problem 4.3" begin
+    using ToeplitzMatrices
+    using SparseArrays
+    M = 11
+    τ = range(0.0,5.0,step=0.1)
+    ρ = exp.(-τ.^2/(1)^2)
+    n = length(ρ)
+    Px = SymmetricToeplitz(ρ) + Diagonal(fill(1e-6,n))
+    σy = 0.1
+    Py = Diagonal(fill(σy,M))
+    E = sparse(1:M,1:5:n,fill(1.0,M))
+    x₀ = zeros(n)
+    Px¹² = cholesky(Px)
+    x = Px¹².L*randn(n)
+    y = E*x
+    x0 = Estimate(x₀, Px)
+    y1 = Estimate(y, Py)
+    x1 = combine(x0, y1, E) # a BLUE
+    
+    uproblem = UnderdeterminedProblem(y,E,Py,Px,x₀)
+    x̃ = solve(uproblem)
+    @test cost(x̃,uproblem) < 5M 
+    @test isapprox(x1.v, x̃.v)
+    @test isapprox(x1.σ, x̃.σ)
+end 

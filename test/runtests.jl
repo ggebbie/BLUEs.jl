@@ -3,7 +3,8 @@ using BLUEs
 using Test
 using LinearAlgebra
 using Statistics
-# includet("test_functions.jl")
+using Unitful
+includet("test_functions.jl")
 
 @testset "BLUEs.jl" begin
 
@@ -12,26 +13,16 @@ using Statistics
     end 
         
     @testset "extensions without units" begin 
-        global use_units = false
         include("test_blues_algebraic_arrays.jl")
-        include("test_dimensional_data.jl")
+        include("test_blues_dimensional_data.jl")
     end
 
     @testset "extensions with units" begin
-        using Unitful
-        # using UnitfulLinearAlgebra
-        # using ToeplitzMatrices
-        # using SparseArrays
-        const K = u"K"; const K² = u"K^2"; m = u"m"; s = u"s";
-        const permil = Unitful.FixedUnits(u"permille")
-
-        ENV["UNITFUL_FANCY_EXPONENTS"] = true
-
-        global use_units = true
+        global K = u"K"; global K² = u"K^2"; global m = u"m"; global s = u"s";
+        global permil = Unitful.FixedUnits(u"permille")
         include("test_blues_unitful.jl")
-        include("test_algebraic_arrays.jl")
-        include("test_dimensional_data.jl") 
+        include("test_blues_algebraic_arrays_unitful.jl")
+        include("test_blues_dimensional_data_unitful.jl") 
         include("test_unitful_linear_algebra.jl")
     end
-
 end
