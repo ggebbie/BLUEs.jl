@@ -1,8 +1,17 @@
+module DimensionalDataExt
 
-# ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
-# if !isnothing(ext)
-#     RowVector = ext.RowVector
-# end
+using BLUEs
+using DimensionalData
+using DimensionalData:AbstractDimArray
+using DimensionalData:AbstractDimMatrix
+using DimensionalData:AbstractDimVector
+using DimensionalData:@dim
+using AlgebraicArrays
+
+ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
+if !isnothing(ext)
+    RowVector = ext.RowVector
+end
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)
@@ -114,4 +123,33 @@ function combine(x0::Estimate,y1::Estimate,E1::Function)
     return Estimate(v,P)
 end
 
-# include("convolutions.jl")
+
+function addcontrol(x₀::AbstractDimArray,u)
+
+    x = deepcopy(x₀)
+    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
+    for ii in eachindex(x₀)
+        # check units
+        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
+        x[ii] += u[ii]
+    end
+    return x
+end
+
+function addcontrol!(x::AbstractDimArray,u)
+
+    ~isequal(length(x),length(u)) && error("x and u different lengths")
+    for ii in eachindex(x)
+        # check units
+        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
+        x[ii] += u[ii]
+    end
+    return x
+end
+
+struct BlockDimArray{T <: Number, DA <: AbstractDimArray{T}} 
+    da :: DA
+    blockdims :: Tuple
+end
+
+end 
