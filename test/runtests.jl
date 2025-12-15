@@ -24,6 +24,6 @@ includet("test_functions.jl")
         include("test_unitful_linear_algebra.jl")
         include("test_algebraic_arrays_unitful.jl")
         include("test_dimensional_data_unitful.jl")
-        # include("test_DD_AA.jl")
+        include("test_DD_AA.jl")
     end
 end

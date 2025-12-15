@@ -26,6 +26,7 @@ AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArra
 AlgebraicArraysExt = "AlgebraicArrays"
 DimensionalDataExt = ["DimensionalData","AlgebraicArrays"]
 UnitfulLinearAlgebraExt = "UnitfulLinearAlgebra"
+AA_DD_ULA_Ext = ["UnitfulLinearAlgebra","DimensionalData","AlgebraicArrays"]
 
 [compat]
 DimensionalData = "0.29"
@@ -35,7 +36,6 @@ ToeplitzMatrices = "0.7, 0.8"
 Unitful = "1"
 UnitfulLinearAlgebra = "0.5"
 julia = "1.10,1.11,1.12"
-
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

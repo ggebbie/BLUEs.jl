@@ -49,14 +49,9 @@ end
 
 include("base.jl")
 include("unitful.jl")
-# include("algebraic_arrays.jl")
-# include("unitful_algebraic_arrays.jl")
-# include("dimensional_data.jl")
-# include("blockdim.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
-# include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     #summary(io, x); println(io) # too long and noisy although informative
