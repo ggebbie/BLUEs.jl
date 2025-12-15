@@ -133,6 +133,36 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix)
     return Estimate(v, P)
 end
 
+"""
+    combine(x0::Estimate,y::Estimate,f::Function)
+
+# Arguments
+- `x0::Estimate`: estimate 1
+- `y::Estimate`: estimate 2
+- `f::Function`: function that relates f(x0) = y
+# Returns
+- `xtilde::Estimate`: combined estimate
+
+```math
+{\\bf E}_i (\\tau)  = 
+\\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
+```
+"""
+function combine(x0::Estimate,y1::Estimate,E1::Function)
+    # written for efficiency with underdetermined problems
+    Pyx = E1(x0.P) 
+    Pxy = transpose(Pyx)
+    EPxy = E1(Pxy)
+    Py = EPxy + y1.P
+    y0 = E1(x0.v)
+    n1 = y1.v - y0
+    tmp = Py \ n1
+    v = Pxy * tmp
+    dP = Pxy * (Py \ Pyx)
+    P = x0.P - dP
+    return Estimate(v,P)
+end
+
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
 symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
@@ -258,5 +288,7 @@ function flipped_mult
     multiply in opposite order given, needs to be defined for impulseresponse
 """
 flipped_mult(a,b) = b*a
+
+function convolve end
 
 end # module

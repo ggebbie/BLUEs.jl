@@ -7,6 +7,7 @@ using DimensionalData:AbstractDimMatrix
 using DimensionalData:AbstractDimVector
 using DimensionalData:@dim
 using AlgebraicArrays
+using LinearAlgebra
 
 ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
 if !isnothing(ext)
@@ -92,38 +93,6 @@ end
 #     end
 #     return DimArray(U,dims(x))
 # end
-
-"""
-    combine(x0::Estimate,y::Estimate,f::Function)
-
-# Arguments
-- `x0::Estimate`: estimate 1
-- `y::Estimate`: estimate 2
-- `f::Function`: function that relates f(x0) = y
-# Returns
-- `xtilde::Estimate`: combined estimate
-
-```math
-{\\bf E}_i (\\tau)  = 
-\\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
-```
-"""
-function combine(x0::Estimate,y1::Estimate,E1::Function)
-    # written for efficiency with underdetermined problems
-    Pyx = E1(x0.P) 
-    Pxy = transpose(Pyx)
-    EPxy = E1(Pxy)
-    Py = EPxy + y1.P
-    y0 = E1(x0.v)
-    n1 = y1.v - y0
-    tmp = Py \ n1
-    v = Pxy * tmp
-    dP = Pxy * (Py \ Pyx)
-    P = x0.P - dP
-    return Estimate(v,P)
-end
-
-
 function addcontrol(x₀::AbstractDimArray,u)
 
     x = deepcopy(x₀)
@@ -150,6 +119,118 @@ end
 struct BlockDimArray{T <: Number, DA <: AbstractDimArray{T}} 
     da :: DA
     blockdims :: Tuple
+end
+
+"""
+function BLUEs.convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
+
+Take the convolution of E and x
+Account for proper overlap of dimension.
+Sum and take into account units.
+Return an `AbstractDimArray`
+"""
+function BLUEs.convolve(x::VectorArray,E::AbstractDimArray) 
+    tnow = last(first(rangedims(x)))
+    lags = first(dims(E))
+    vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+    (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
+end
+
+function BLUEs.convolve(x::VectorArray, M::AbstractDimArray, t::Number)
+    lags = first(dims(M))
+    return sum([M[ii,:] ⋅ x[Near(t-ll),:] for (ii,ll) in enumerate(lags)])
+end
+
+#function convolve(x::AbstractDimArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+function BLUEs.convolve(x::VectorArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
+    if ndims(M) == 2 
+        return VectorArray(DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx))
+    elseif ndims(M) == 3
+
+        # do a sample calculation to get units.
+        Msmall = M[:,:,1]
+        yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume everything has the same units
+
+        y = DimArray(zeros(length(Tx),last(size(M)))yunit,(Tx,last(dims(M))))
+        for (ii,vv) in enumerate(last(dims(M)))
+            
+            Msmall = M[:,:,ii]
+            y[:,ii] = convolve(x,Msmall,Tx)
+
+        end
+        return y
+    else
+        error("M has wrong number of dims")
+    end
+end
+# basically repeats previous function: any way to simplify?
+function BLUEs.convolve(P::MatrixArray, M::AbstractDimArray, Tx::Union{Ti,Vector}) 
+    T2 = typeof(parent(convolve(first(P),M,Tx)))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        #Pyx[i] = parent(parent(convolve(P[i],M,Tx,coeffs)))
+        Pyx[i] = parent(convolve(P[i],M,Tx))
+    end
+    return MatrixArray(DimArray(Pyx,domaindims(P)))
+end
+
+function BLUEs.convolve(P::MatrixArray,M::AbstractDimArray) 
+    #function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+    # became more complicated when returning a scalar was not allowed
+    T2 = typeof(first(parent(convolve(first(P),M))))
+    println(T2)
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        #Pyx[i] = convolve(P[i],M)
+        Pyx[i] = first(parent(convolve(P[i],M)))
+    end
+    return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
+end
+
+# basically repeats previous function: any way to simplify?
+function BLUEs.convolve(P::MatrixArray,M::AbstractDimArray,coeffs::DimVector)
+    T2 = typeof(first(parent(convolve(first(P),M,coeffs))))
+    #T2 = typeof(convolve(first(P),M,coeffs))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        #        Pyx[i] = convolve(P[i],M,coeffs)
+        Pyx[i] = first(parent(convolve(P[i],M,coeffs)))
+    end
+    #return DimArray(Pyx,dims(P))
+    return transpose(VectorArray(DimArray(Pyx,rangedims(P))))
+    #return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
+    #return MatrixArray(DimArray(Pyx,(RowVector(["1"]),rangedims(P))))
+end
+
+function BLUEs.convolve(x::VectorArray, M::AbstractDimArray, coeffs::DimVector) 
+    statevars = dims(x,3) # equal to rangedims(x)[3]
+    vals = sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+    #return sum([convolve(x[:,:,At(s)], M)  * coeffs[At(s)] for s in statevars])
+    (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
+end
+
+function BLUEs.convolve(x::VectorArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) # where T <: Number
+    if ndims(M) == 2
+        return VectorArray(DimArray([convolve(x, M, Tx[tt], coeffs) for tt in eachindex(Tx)], Tx))
+    elseif ndims(M) == 3
+        error("some code should go here")
+    else
+        error("M has wrong number of dims") 
+    end
+end
+# basically repeats previous function: any way to simplify?
+function BLUEs.convolve(P::MatrixArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) 
+    T2 = typeof(parent(convolve(first(P),M,Tx,coeffs)))
+    Pyx = Array{T2}(undef,size(P))
+    for i in eachindex(P)
+        Pyx[i] = parent(convolve(P[i],M,Tx,coeffs))
+    end
+    return MatrixArray(DimArray(Pyx,domaindims(P)))
+end
+
+function BLUEs.convolve(x::VectorArray, M::AbstractDimArray, t::Number, coeffs::DimVector) 
+    statevars = dims(x,3)
+    return sum([convolve(x[:,:,At(s)], M, t)  * coeffs[At(s)] for s in statevars])
 end
 
 end 
