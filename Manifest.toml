@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "066724603bb02abe7e27d844287fbaaeaf9f39bf"
+project_hash = "d7b674a0c93849d38448b5ba63d5f14a74d6b4b8"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -75,16 +75,18 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
 
 [[deps.BLUEs]]
-deps = ["DimensionalData", "LinearAlgebra", "Measurements", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
+deps = ["LinearAlgebra", "Measurements", "SparseArrays", "Statistics", "ToeplitzMatrices", "Unitful", "UnitfulLinearAlgebra"]
 path = "."
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.3.0"
+version = "0.3.1"
 
     [deps.BLUEs.extensions]
     AlgebraicArraysExt = "AlgebraicArrays"
+    DimensionalDataExt = ["DimensionalData", "AlgebraicArrays"]
 
     [deps.BLUEs.weakdeps]
     AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
+    DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"

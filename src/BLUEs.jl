@@ -1,11 +1,12 @@
 module BLUEs
 
-using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
-using DimensionalData
-using DimensionalData:AbstractDimArray
-using DimensionalData:AbstractDimMatrix
-using DimensionalData:AbstractDimVector
-using DimensionalData:@dim
+using LinearAlgebra, Statistics, Unitful, Measurements
+# using UnitfulLinearAlgebra
+# using DimensionalData
+# using DimensionalData:AbstractDimArray
+# using DimensionalData:AbstractDimMatrix
+# using DimensionalData:AbstractDimVector
+# using DimensionalData:@dim
 # using AlgebraicArrays           # 
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
@@ -50,12 +51,12 @@ include("base.jl")
 include("unitful.jl")
 # include("algebraic_arrays.jl")
 # include("unitful_algebraic_arrays.jl")
-include("dimensional_data.jl")
-include("blockdim.jl")
+# include("dimensional_data.jl")
+# include("blockdim.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
-include("deprecated.jl")
+# include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     #summary(io, x); println(io) # too long and noisy although informative
@@ -222,9 +223,9 @@ function impulseresponse(funk::Function,x,args...)
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        if y isa AbstractDimArray
-            Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
-        else
+        # if y isa AbstractDimArray
+        #     Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
+        # else
             tmp = ustrip.((y - y₀)/Δu)
             # getting ugly around here
             if tmp isa Number
@@ -232,7 +233,7 @@ function impulseresponse(funk::Function,x,args...)
             else
                 Ep[:,rr] .= vec(tmp)
             end
-        end
+        # end
     end
     
     # This function could use vcat to be cleaner (but maybe slower)
@@ -249,29 +250,6 @@ function impulseresponse(funk::Function,x,args...)
     else
         return UnitfulMatrix(Ep,vec(unit.(y₀)),vec(unit.(x)))
     end
-end
-
-function addcontrol(x₀::AbstractDimArray,u)
-
-    x = deepcopy(x₀)
-    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
-    for ii in eachindex(x₀)
-        # check units
-        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
-
-function addcontrol!(x::AbstractDimArray,u)
-
-    ~isequal(length(x),length(u)) && error("x and u different lengths")
-    for ii in eachindex(x)
-        # check units
-        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
-        x[ii] += u[ii]
-    end
-    return x
 end
 
 """
