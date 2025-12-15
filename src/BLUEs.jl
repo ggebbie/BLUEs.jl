@@ -1,13 +1,16 @@
 module BLUEs
 
-using LinearAlgebra, Statistics, Unitful, Measurements
+using LinearAlgebra
+using Statistics
+using Measurements
+# using Unitful
 # using UnitfulLinearAlgebra
 # using DimensionalData
 # using DimensionalData:AbstractDimArray
 # using DimensionalData:AbstractDimMatrix
 # using DimensionalData:AbstractDimVector
 # using DimensionalData:@dim
-# using AlgebraicArrays           # 
+# using AlgebraicArrays
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
@@ -41,14 +44,14 @@ Estimate(v::T, sigma::T) where T <: Number = Estimate([v], [sigma^2;;])
 
 # translate Vector{Measurement} to Estimate
 # let it error rather than restricting types at compile-time
-function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity{<:Measurement}} 
+function Estimate(v::AbstractVector{T}) where T <: Measurement
         vval = Measurements.value.(v)
         verr = Measurements.uncertainty.(v);
         return Estimate(vval, verr) # just provide standard error
 end 
 
 include("base.jl")
-include("unitful.jl")
+# include("unitful.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")

@@ -1,6 +1,6 @@
 name = "BLUEs"
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
 
 [deps]
@@ -15,6 +15,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [weakdeps]
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
@@ -23,9 +24,11 @@ UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
 
 [extensions]
+UnitfulExt = "Unitful"
 AlgebraicArraysExt = "AlgebraicArrays"
 DimensionalDataExt = ["DimensionalData","AlgebraicArrays"]
 UnitfulLinearAlgebraExt = "UnitfulLinearAlgebra"
+UnitfulAlgebraicArraysExt = ["Unitful","AlgebraicArrays"]
 AA_DD_ULA_Ext = ["UnitfulLinearAlgebra","DimensionalData","AlgebraicArrays"]
 
 [compat]
@@ -42,6 +45,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [targets]
 test = ["Test"]
