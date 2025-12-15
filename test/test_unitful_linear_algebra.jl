@@ -4,11 +4,13 @@
     using ToeplitzMatrices
     using SparseArrays
 
+    global K = u"K"; global K² = u"K^2"; global m = u"m"; global s = u"s";
+    global permil = Unitful.FixedUnits(u"permille")
+
     @testset "trend analysis: left-uniform matrix" begin
 
         M = 10  # number of obs
         t = collect(0:1:M-1)s
-
         a = randn()m # intercept
         b = randn()m/s # slope
                    y = a .+ b.*t .+ randn(M)m

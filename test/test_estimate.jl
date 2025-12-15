@@ -39,11 +39,11 @@ end
     t = collect(0:1:M-1)
     a = randn() # intercept
     b = randn() # slope
+
     ytrue = a .+ b.*t 
     ỹ = a .+ b.*t .+ randn(M)
     E = hcat(ones(M),t)
     Py⁻¹ = Diagonal(fill(1.0,M))
-
     y_estimate = Estimate(ytrue,inv(Py⁻¹))
     x = E\y_estimate # invert the observations to obtain solution
     @test isapprox(x.v[1],a)
