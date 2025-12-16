@@ -176,7 +176,6 @@ function BLUEs.convolve(P::MatrixArray,M::AbstractDimArray)
     #function convolve(P::DimArray{T},M) where T<: AbstractDimArray
     # became more complicated when returning a scalar was not allowed
     T2 = typeof(first(parent(convolve(first(P),M))))
-    println(T2)
     Pyx = Array{T2}(undef,size(P))
     for i in eachindex(P)
         Pyx[i] = first(parent(convolve(P[i],M)))
@@ -224,5 +223,8 @@ function BLUEs.convolve(x::VectorArray, M::AbstractDimArray, t::Number, coeffs::
     statevars = dims(x,3)
     return sum([convolve(x[:,:,At(s)], M, t)  * coeffs[At(s)] for s in statevars])
 end
+
+# helper routine for impulse response
+BLUEs.response(y::AbstractDimArray,y₀,Δu) = ustrip.(vec(parent((y - y₀)/Δu)))
 
 end 

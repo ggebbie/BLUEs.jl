@@ -251,17 +251,7 @@ function impulseresponse(funk::Function,x,args...)
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        # if y isa AbstractDimArray
-        #     Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
-        # else
-            tmp = ustrip.((y - y₀)/Δu)
-            # getting ugly around here
-            if tmp isa Number
-                Ep[:,rr] .= tmp
-            else
-                Ep[:,rr] .= vec(tmp)
-            end
-        # end
+        Ep[:,rr] = response(y,y₀,Δu)
     end
     
     # This function could use vcat to be cleaner (but maybe slower)
@@ -288,5 +278,8 @@ function flipped_mult
 flipped_mult(a,b) = b*a
 
 function convolve end
+
+response(y::Number,y₀,Δu) = (y - y₀)/Δu
+response(y,y₀,Δu) = vec((y - y₀)/Δu)
 
 end # module
