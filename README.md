@@ -25,6 +25,7 @@ aval = Measurements.value.(a)
 aerr = Measurements.uncertainty.(a);
 
 # define an `Estimate` that permits covariance/uncertainty information to be saved
+# the uncertaintly matrix will be diagonal in this case
 x  = Estimate(aval, aerr) # just provide standard error
 
 # inspect covariance/uncertainty matrix
@@ -42,13 +43,13 @@ z = combine(x, y)
 
 - Inputs are streamlined by bundling all information with its central estimate and uncertainty. The Estimate type has this information and it is now used for solutions, first guesses, and observations.
 	
-- It is recommended for `combine` to replace `solve` with the idea that information from two Estimates is combined to make a new Estimate. `solve` previously required an underdetermined or overdetermined problem to be specified, but now there is limited logic to do this automatically.
-	
 - Operations can be performed on arbitrary `AlgebraicArray`s using the AlgebraicArrays.jl package.
 	
-    Consistently composes with `DimArray`s, including for coefficients
+- Consistently composes with `DimArray`s, including for coefficients
 	
-    `combine` does not require the observational operation to be in linear or matrix form. It currently accepts a Function argument which makes a priori impulse reponse calculations unnecessary.
+- `combine` does not require the observational operation to be in linear or matrix form. It currently accepts a Function argument which makes a priori impulse reponse calculations unnecessary.
+
+- It is recommended for `combine` to replace `solve` with the idea that information from two Estimates is combined to make a new Estimate. `solve` previously required an underdetermined or overdetermined problem to be specified, but now there is limited logic to do this automatically.
 
 ## Examples
 
@@ -60,6 +61,6 @@ Three objective mapping notebooks now exist in the notebooks branch.
 
 - `objectivemapping_BLUES_AlgebraicArrays.jl` - full featured notebook using whole ecosystem, including BLUEs for the Gauss-Markov problem, AlgebraicArrays.jl to handle conversion from a 2D grid to matrices and vectors, and DimensionalData.jl for labeling the variables.
 
-## Future features:
+## Package extensions
 
-Support for UnitfulLinearAlgebra.jl is experimental at this time.
+Support for `UnitfulLinearAlgebra.jl`, `DimensionalData.jl`, `Unitful.jl`, `UnitfulLinearAlgebra.jl`, and various combinations is now provided in package extensions.
