@@ -1,12 +1,16 @@
 module BLUEs
 
-using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
-using DimensionalData
-using DimensionalData:AbstractDimArray
-using DimensionalData:AbstractDimMatrix
-using DimensionalData:AbstractDimVector
-using DimensionalData:@dim
-using AlgebraicArrays
+using LinearAlgebra
+using Statistics
+using Measurements
+# using Unitful
+# using UnitfulLinearAlgebra
+# using DimensionalData
+# using DimensionalData:AbstractDimArray
+# using DimensionalData:AbstractDimMatrix
+# using DimensionalData:AbstractDimVector
+# using DimensionalData:@dim
+# using AlgebraicArrays
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
@@ -40,23 +44,17 @@ Estimate(v::T, sigma::T) where T <: Number = Estimate([v], [sigma^2;;])
 
 # translate Vector{Measurement} to Estimate
 # let it error rather than restricting types at compile-time
-function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity{<:Measurement}} 
+function Estimate(v::AbstractVector{T}) where T <: Measurement
         vval = Measurements.value.(v)
         verr = Measurements.uncertainty.(v);
         return Estimate(vval, verr) # just provide standard error
 end 
 
-#include("dim_estimate.jl")
 include("base.jl")
-include("unitful.jl")
-include("algebraic_arrays.jl")
-include("unitful_algebraic_arrays.jl")
-include("dimensional_data.jl")
-include("blockdim.jl")
+# include("unitful.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
-include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     #summary(io, x); println(io) # too long and noisy although informative
@@ -131,6 +129,36 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix)
         error("combine method not implemented")
     end
     return Estimate(v, P)
+end
+
+"""
+    combine(x0::Estimate,y::Estimate,f::Function)
+
+# Arguments
+- `x0::Estimate`: estimate 1
+- `y::Estimate`: estimate 2
+- `f::Function`: function that relates f(x0) = y
+# Returns
+- `xtilde::Estimate`: combined estimate
+
+```math
+{\\bf E}_i (\\tau)  = 
+\\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
+```
+"""
+function combine(x0::Estimate,y1::Estimate,E1::Function)
+    # written for efficiency with underdetermined problems
+    Pyx = E1(x0.P) 
+    Pxy = transpose(Pyx)
+    EPxy = E1(Pxy)
+    Py = EPxy + y1.P
+    y0 = E1(x0.v)
+    n1 = y1.v - y0
+    tmp = Py \ n1
+    v = Pxy * tmp
+    dP = Pxy * (Py \ Pyx)
+    P = x0.P - dP
+    return Estimate(v,P)
 end
 
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
@@ -223,17 +251,7 @@ function impulseresponse(funk::Function,x,args...)
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        if y isa AbstractDimArray
-            Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
-        else
-            tmp = ustrip.((y - y₀)/Δu)
-            # getting ugly around here
-            if tmp isa Number
-                Ep[:,rr] .= tmp
-            else
-                Ep[:,rr] .= vec(tmp)
-            end
-        end
+        Ep[:,rr] = response(y,y₀,Δu)
     end
     
     # This function could use vcat to be cleaner (but maybe slower)
@@ -252,34 +270,16 @@ function impulseresponse(funk::Function,x,args...)
     end
 end
 
-function addcontrol(x₀::AbstractDimArray,u)
-
-    x = deepcopy(x₀)
-    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
-    for ii in eachindex(x₀)
-        # check units
-        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
-
-function addcontrol!(x::AbstractDimArray,u)
-
-    ~isequal(length(x),length(u)) && error("x and u different lengths")
-    for ii in eachindex(x)
-        # check units
-        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
-
 """
 function flipped_mult
 
     multiply in opposite order given, needs to be defined for impulseresponse
 """
 flipped_mult(a,b) = b*a
+
+function convolve end
+
+response(y::Number,y₀,Δu) = (y - y₀)/Δu
+response(y,y₀,Δu) = vec((y - y₀)/Δu)
 
 end # module

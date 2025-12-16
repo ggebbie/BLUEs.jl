@@ -1,5 +1,6 @@
 using DimensionalData
 using DimensionalData:@dim
+using AlgebraicArrays
 
 # set necessary functions first (may get overwritten and complain)
 function source_water_matrix_with_lag(surfaceregions,lags)
