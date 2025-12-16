@@ -1,6 +1,6 @@
 name = "BLUEs"
 uuid = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["G Jake Gebbie <ggebbie@whoi.edu>"]
 
 [deps]
