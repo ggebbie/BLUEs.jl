@@ -9,43 +9,39 @@ DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [weakdeps]
-Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [sources]
 AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
 
 [extensions]
-UnitfulExt = "Unitful"
+AA_DD_ULA_Ext = ["UnitfulLinearAlgebra", "DimensionalData", "AlgebraicArrays"]
 AlgebraicArraysExt = "AlgebraicArrays"
-DimensionalDataExt = ["DimensionalData","AlgebraicArrays"]
+DimensionalDataExt = ["DimensionalData", "AlgebraicArrays"]
+UnitfulAlgebraicArraysExt = ["Unitful", "AlgebraicArrays"]
+UnitfulExt = "Unitful"
 UnitfulLinearAlgebraExt = "UnitfulLinearAlgebra"
-UnitfulAlgebraicArraysExt = ["Unitful","AlgebraicArrays"]
-AA_DD_ULA_Ext = ["UnitfulLinearAlgebra","DimensionalData","AlgebraicArrays"]
 
 [compat]
 DimensionalData = "0.29"
 Measurements = "2"
-Statistics = "1"
-ToeplitzMatrices = "0.7, 0.8"
 Unitful = "1"
 UnitfulLinearAlgebra = "0.5"
 julia = "1.10,1.11,1.12"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
-UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [targets]
 test = ["Test"]

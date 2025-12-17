@@ -1,16 +1,7 @@
 module BLUEs
 
 using LinearAlgebra
-using Statistics
 using Measurements
-# using Unitful
-# using UnitfulLinearAlgebra
-# using DimensionalData
-# using DimensionalData:AbstractDimArray
-# using DimensionalData:AbstractDimMatrix
-# using DimensionalData:AbstractDimVector
-# using DimensionalData:@dim
-# using AlgebraicArrays
 
 export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
