@@ -1,4 +1,4 @@
-@testset "blues_unitful" begin
+@testset "unitful" begin
 
     @testset "error propagation" begin
         using Measurements

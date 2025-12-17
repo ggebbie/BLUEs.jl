@@ -7,6 +7,42 @@
     global K = u"K"; global K² = u"K^2"; global m = u"m"; global s = u"s";
     global permil = Unitful.FixedUnits(u"permille")
 
+
+    """
+    Are two matrices within a certain tolerance?
+    Use to simplify tests.
+    """
+    within(A,B,tol) =  maximum(abs.(ustrip.(A - B))) < tol
+    within(A::UnitfulLinearAlgebra.AbstractUnitfulType,B::UnitfulLinearAlgebra.AbstractUnitfulType,tol) =  maximum(abs.(parent(A - B))) < tol
+
+
+    @testset "mixed signals: dimensionless matrix" begin
+        N = 2
+        for M in 1:4
+
+            σₓ = rand()
+            # exact = false to work
+            E = UnitfulMatrix(randn(M,N),fill(m,M),fill(m,N),exact=true)
+            Px⁻¹ = Diagonal(fill(σₓ^-1,N),unitdomain(E).^-1,unitdomain(E))
+            #v = UnitfulMatrix(randn(N)m)
+            v = randn(N)m
+            x = Estimate(v,inv(Px⁻¹))
+            y = E*x
+
+            if M == N
+                xtilde1 = inv(E)*y # use inv for this special repeat, repeat with left divide below
+                @test sum(isapprox.(x.v, xtilde1.v, atol=1e-8m)) == N 
+                @test within(x.P, xtilde1.P,1e-10) # from UnitfulLinearAlgebra
+            end
+        
+            xtilde2 = E\y
+            if  N ≤ M
+                @test sum(isapprox.(x.v, xtilde2.v, atol=1e-8m)) == N 
+                @test within(x.P, xtilde2.P,1e-10) # from UnitfulLinearAlgebra
+            end
+        end
+    end
+
     @testset "trend analysis: left-uniform matrix" begin
 
         M = 10  # number of obs
