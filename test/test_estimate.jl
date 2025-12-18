@@ -69,6 +69,8 @@ end
         intercept::T
         slope::T
     end
+    Line(a::Vector) = Line(first(a),last(a))
+
     # make proper interface for Vector
     Base.vec(b::Line) = vcat(b.intercept,b.slope)
     Base.size(b::Line) = (2,)
@@ -100,8 +102,17 @@ end
     Base.getindex(b::LineUncertainty, inds::Vararg) = getindex(Matrix(b), inds...)
     Base.getindex(b::LineUncertainty; kw...) = getindex(Matrix(b); kw...)
 
-    Px0 = LineUncertainty(line1,line2)
+    LineUncertainty(A::Matrix) = LineUncertainty(Line(A[:,1]),Line(A[:,2]))
 
+    Base.:*(A::LineUncertainty, b::Line ) =  Line(Matrix(A) * vec(b))
+    Base.:*(A::LineUncertainty, B::LineUncertainty) = LineUncertainty(Matrix(A) * Matrix(B))
+    Base.:*(a::Number, b::Line) =  Line(a*b.intercept, a*b.slope)
+    # function obs(t, line::LineUncertainty)
+    #     return [obs(t,line.intercept), obs(t,line.slope)]
+    # end  
+
+    Px0 = LineUncertainty(line1,line2)
+    x0 = Estimate(line0, Px0)
     Py⁻¹ = Diagonal(fill(1.0,M))
     y = Estimate(ỹcontaminated, inv(Py⁻¹))
     
@@ -109,17 +120,14 @@ end
     obs1(t) = obs(t, line1)
     obs2(t) = obs(t, line2)
     E = hcat(obs1.(t),obs2.(t))
+    # # ET = LineUncertainty(collect(transpose(E)))
+    
+    # E2 = Line(obs1.(t),obs2.(t))
 
     x = E\y # invert the observations to obtain solution
 
+    combine(x0,y,obs)
     @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
-    
-    # # least squares solution method  
-    # problem = OverdeterminedProblem(ỹ,E,Py⁻¹)
-    # x̃ = solve(problem,alg=:textbook)
-    # x̃1 = solve(problem,alg=:hessian)
-    # @test cost(x̃,problem) < 5M # rough guide, could get unlucky and not pass
-    # @test cost(x̃1,problem) < 5M # rough guide, could get unlucky and not pass
 end
 
 @testset "left-uniform problem with prior info" begin
