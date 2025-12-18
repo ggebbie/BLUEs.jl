@@ -57,6 +57,71 @@ end
     @test cost(x̃1,problem) < 5M # rough guide, could get unlucky and not pass
 end
 
+@testset "trend analysis: custom type" begin
+
+    import Base: vec, getindex, Matrix, size 
+    M = 10  # number of obs
+    t = collect(0:1:M-1)
+    a = randn() # intercept
+    b = randn() # slope
+
+    struct Line{T} <: AbstractArray{T,1}
+        intercept::T
+        slope::T
+    end
+    # make proper interface for Vector
+    Base.vec(b::Line) = vcat(b.intercept,b.slope)
+    Base.size(b::Line) = (2,)
+    Base.getindex(b::Line, inds::Vararg) = getindex(vec(b), inds...)
+    Base.getindex(b::Line; kw...) = getindex(vec(b); kw...)
+
+    line_true = Line(a,b);
+
+    function obs(t, line::Line)
+        return line.intercept + line.slope*t 
+    end  
+
+    obs_true(t) = obs(t, line_true)
+    ytrue = obs_true.(t) 
+    ỹcontaminated = ytrue .+ randn(M)
+
+    line0 = Line(0.,0.) # first guess of line
+    line1 = Line(1.,0.) # first guess of line
+    line2 = Line(0.,1.) # first guess of line
+
+    # uncertainty of first guess
+    struct LineUncertainty{T,L <: Line{T}} <: AbstractArray{T,2}
+        intercept::L
+        slope::L
+    end 
+    # make proper interface for Matrix
+    Base.Matrix(b::LineUncertainty) = hcat(b.intercept,b.slope)
+    Base.size(b::LineUncertainty) = (2,2)
+    Base.getindex(b::LineUncertainty, inds::Vararg) = getindex(Matrix(b), inds...)
+    Base.getindex(b::LineUncertainty; kw...) = getindex(Matrix(b); kw...)
+
+    Px0 = LineUncertainty(line1,line2)
+
+    Py⁻¹ = Diagonal(fill(1.0,M))
+    y = Estimate(ỹcontaminated, inv(Py⁻¹))
+    
+    # impulse response method
+    obs1(t) = obs(t, line1)
+    obs2(t) = obs(t, line2)
+    E = hcat(obs1.(t),obs2.(t))
+
+    x = E\y # invert the observations to obtain solution
+
+    @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
+    
+    # # least squares solution method  
+    # problem = OverdeterminedProblem(ỹ,E,Py⁻¹)
+    # x̃ = solve(problem,alg=:textbook)
+    # x̃1 = solve(problem,alg=:hessian)
+    # @test cost(x̃,problem) < 5M # rough guide, could get unlucky and not pass
+    # @test cost(x̃1,problem) < 5M # rough guide, could get unlucky and not pass
+end
+
 @testset "left-uniform problem with prior info" begin
     y = [-1.9]
     σn = 0.2
