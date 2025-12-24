@@ -2,3 +2,7 @@
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 BLUEs = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[sources]
+AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
+BLUEs = {path = ".."}

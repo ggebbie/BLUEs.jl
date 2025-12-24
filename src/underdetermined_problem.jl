@@ -14,7 +14,8 @@ struct UnderdeterminedProblem
     E :: AbstractMatrix
     Cnn :: AbstractMatrix
     Cxx :: Union{AbstractMatrix, Missing}
-    x₀ :: Union{AbstractVector, AbstractDimArray, Missing}
+    x₀ :: Union{AbstractVector, Missing}
+    # x₀ :: Union{AbstractVector, AbstractDimArray, Missing}
 end
 
 """
@@ -46,7 +47,6 @@ function solve(up::UnderdeterminedProblem)
 end
 
 function cost(x̃::Estimate,up::UnderdeterminedProblem)
-#function cost(x̃::Union{Estimate,DimEstimate},up::UnderdeterminedProblem)
    Jdata = datacost(x̃,up)
    Jcontrol = controlcost(x̃,up) 
    J = Jdata + Jcontrol

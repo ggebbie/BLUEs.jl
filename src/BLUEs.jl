@@ -1,20 +1,14 @@
 module BLUEs
 
-using LinearAlgebra, Statistics, Unitful, UnitfulLinearAlgebra, Measurements
-using DimensionalData
-using DimensionalData:AbstractDimArray
-using DimensionalData:AbstractDimMatrix
-using DimensionalData:AbstractDimVector
-using DimensionalData:@dim
-using AlgebraicArrays
+using LinearAlgebra
+using Measurements
 
-export Estimate, DimEstimate, OverdeterminedProblem, UnderdeterminedProblem
+export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
 export expectedunits, impulseresponse, convolve
-export predictobs, addcontrol, addcontrol!, flipped_mult
-#export DimEstimate
+export addcontrol, addcontrol!, flipped_mult
 
 import Base: show, getproperty, propertynames, *, +, -, \, sum
 import LinearAlgebra: pinv, transpose
@@ -41,23 +35,17 @@ Estimate(v::T, sigma::T) where T <: Number = Estimate([v], [sigma^2;;])
 
 # translate Vector{Measurement} to Estimate
 # let it error rather than restricting types at compile-time
-function Estimate(v::AbstractVector{T}) where T <: Union{<:Measurement, Quantity{<:Measurement}} 
+function Estimate(v::AbstractVector{T}) where T <: Measurement
         vval = Measurements.value.(v)
         verr = Measurements.uncertainty.(v);
         return Estimate(vval, verr) # just provide standard error
 end 
 
-#include("dim_estimate.jl")
 include("base.jl")
-include("unitful.jl")
-include("algebraic_arrays.jl")
-include("unitful_algebraic_arrays.jl")
-include("dimensional_data.jl")
-include("blockdim.jl")
+# include("unitful.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
-include("deprecated.jl")
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::Estimate)
     #summary(io, x); println(io) # too long and noisy although informative
@@ -78,19 +66,9 @@ standard_error(P::AbstractArray) = .√diag(P)
 """
 function getproperty(x::Estimate, d::Symbol)
     if d === :σ
-        if x.P isa UnitfulDimMatrix # requires N = 2 where `diag` is defined
-        # assumes, does not check, that unitdims are consistent with diag of P 
-            return UnitfulDimMatrix(ustrip.(.√diag(x.P)),unitdims(x.v),dims=first(dims(x.P)))
-        else
-            return standard_error(x.P) # .√diag(x.P)
-        end
+        return standard_error(x.P) # .√diag(x.P)
     elseif d === :x
-        if x.v isa UnitfulDimMatrix # to accomodate previous block, perhaps need to expand to AbstractUnitfulType
-            tmp = measurement.(parent(x.v),parent(x.σ))
-            return UnitfulDimMatrix(tmp, unitdims(x.v), dims= dims(x.v))
-        else
-            return measurement.(x.v,x.σ)
-        end
+        return measurement.(x.v,x.σ)
     else
         return getfield(x, d)
     end
@@ -144,6 +122,36 @@ function combine(x0::Estimate, y::Estimate, E::AbstractMatrix)
     return Estimate(v, P)
 end
 
+"""
+    combine(x0::Estimate,y::Estimate,f::Function)
+
+# Arguments
+- `x0::Estimate`: estimate 1
+- `y::Estimate`: estimate 2
+- `f::Function`: function that relates f(x0) = y
+# Returns
+- `xtilde::Estimate`: combined estimate
+
+```math
+{\\bf E}_i (\\tau)  = 
+\\frac{1}{N} \\int_{t - \\tau}^{t} {\\bf G}'^{\\dagger} (t^* + \\tau - t) ~ {\\bf D}_i  ~ {\\bf G}' (t - t^*) ~ d t ^* , 
+```
+"""
+function combine(x0::Estimate,y1::Estimate,E1::Function)
+    # written for efficiency with underdetermined problems
+    Pyx = E1(x0.P) 
+    Pxy = transpose(Pyx)
+    EPxy = E1(Pxy)
+    Py = EPxy + y1.P
+    y0 = E1(x0.v)
+    n1 = y1.v - y0
+    tmp = Py \ n1
+    v = Pxy * tmp
+    dP = Pxy * (Py \ Pyx)
+    P = x0.P - dP
+    return Estimate(v,P)
+end
+
 symmetric_innerproduct(E::Union{AbstractVector,AbstractMatrix}) = transpose(E)*E
 symmetric_innerproduct(E::AbstractMatrix,Cnn⁻¹) = transpose(E)*(Cnn⁻¹*E)
 symmetric_innerproduct(n::AbstractVector,Cnn⁻¹) = n ⋅ (Cnn⁻¹*n)
@@ -174,7 +182,6 @@ end
     unweighted `datacost`
 """
 function rmserror(x̃::Estimate, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
-#function rmserror(x̃::Union{Estimate, DimEstimate}, p::Union{OverdeterminedProblem, UnderdeterminedProblem})
     n = p.y - p.E*x̃.v
     return sqrt(n ⋅ n)
 end
@@ -186,7 +193,7 @@ end
     unweighted `controlcost`
 
     # Args 
-    -`x̃`: DimEstimate
+    -`x̃`: Estimate
     -`p`: problem
     -`dim3`: allows to access third dimension, which is assumed to be state var. dim.
 """
@@ -224,36 +231,18 @@ function impulseresponse(x₀,M)
 function impulseresponse(funk::Function,x,args...)
     u = Quantity.(zeros(length(x)),unit.(vec(x)))
     y₀ = funk(x,args...)
-    #Eunits = expectedunits(y₀,x)
-    #Eu = Quantity.(zeros(length(y₀),length(x)),Eunits)
     Ep = zeros(length(y₀), length(x))
-    
     for rr in eachindex(x)
-        #u = zeros(length(x)).*unit.(x)[:]
         if length(x) > 1
             u = Quantity.(zeros(length(x)), unit.(vec(x)))
         else
             u = Quantity(0.0,unit(x))
         end
-        
         Δu = Quantity(1.0,unit.(x)[rr])
         u[rr] += Δu
         x₁ = addcontrol(x,u)
         y = funk(x₁,args...)
-        #println(y)
-        if y isa AbstractDimArray
-            #Ep[:,rr] .= vec(parent((y - y₀)/Δu))
-            Ep[:, rr] .= ustrip.(vec(parent((y - y₀)/Δu)))
-   
-        else
-            tmp = ustrip.((y - y₀)/Δu)
-            # getting ugly around here
-            if tmp isa Number
-                Ep[:,rr] .= tmp
-            else
-                Ep[:,rr] .= vec(tmp)
-            end
-        end
+        Ep[:,rr] = response(y,y₀,Δu)
     end
     
     # This function could use vcat to be cleaner (but maybe slower)
@@ -273,42 +262,15 @@ function impulseresponse(funk::Function,x,args...)
 end
 
 """
-    function predictobs(funk,x...)
-
-    Get observations derived from function `funk`
-    y = funk(x...)
-    Turns out to not be useful so far.
-"""
-predictobs(funk,x...) = funk(x...)
-
-function addcontrol(x₀::AbstractDimArray,u)
-
-    x = deepcopy(x₀)
-    ~isequal(length(x₀),length(u)) && error("x₀ and u different lengths")
-    for ii in eachindex(x₀)
-        # check units
-        ~isequal(unit(x₀[ii]),unit(u[ii])) && error("x₀ and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
-
-function addcontrol!(x::AbstractDimArray,u)
-
-    ~isequal(length(x),length(u)) && error("x and u different lengths")
-    for ii in eachindex(x)
-        # check units
-        ~isequal(unit(x[ii]),unit(u[ii])) && error("x and u different units")
-        x[ii] += u[ii]
-    end
-    return x
-end
-
-"""
 function flipped_mult
 
     multiply in opposite order given, needs to be defined for impulseresponse
 """
 flipped_mult(a,b) = b*a
+
+function convolve end
+
+response(y::Number,y₀,Δu) = (y - y₀)/Δu
+response(y,y₀,Δu) = vec((y - y₀)/Δu)
 
 end # module

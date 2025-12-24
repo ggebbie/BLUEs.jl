@@ -2,7 +2,8 @@
     Matrix multiplication for Estimate includes
     error propagation.
 """
-*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*x.P*transpose(F))
+*(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*(x.P*transpose(F)))
+# *(F::AbstractMatrix,x::Estimate) = Estimate(F*x.v,F*transpose(F*x.P))
 
 """    
     Matrix left divide for Estimate includes
