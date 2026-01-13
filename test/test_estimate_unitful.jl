@@ -91,4 +91,81 @@
         @test maximum(x̃.σ[:])  ≤  σcheck
         @test minimum(x̃.σ[:])  ≥  0.0 * σcheck
     end 
+    @testset "custom type with units" begin
+        using Unitful
+
+        import Base: vec, getindex, Matrix, size 
+        M = 10  # number of obs
+        s = u"s"
+        K = u"K"
+        t = (0:1:M-1)s
+        a = randn()*K # intercept
+        b = randn()*K/s # slope
+
+        struct Line{T1, T2} <: AbstractVector{Any}
+            intercept::T1
+            slope::T2
+        end
+        Line(a::AbstractVector) = Line(first(a),last(a))
+     
+        # make proper interface for Vector
+        Base.vec(b::Line) = vcat(b.intercept,b.slope)
+        Base.size(b::Line) = (2,)
+        Base.getindex(b::Line, inds::Vararg) = getindex(vec(b), inds...)
+        Base.getindex(b::Line; kw...) = getindex(vec(b); kw...)
+
+        line_true = Line(a,b)
+
+        function obs(t, line::Line)
+            return line.intercept + line.slope*t 
+        end  
+
+        obs_true(t) = obs(t, line_true)
+        ytrue = obs_true.(t) 
+        ỹcontaminated = ytrue .+ randn(M)*K
+
+        line0 = Line(0.0*K,0.0*K/s) # first guess of line
+        line1 = Line(1.0*K,0.0*K/s) # first guess of line
+        line2 = Line(0.0*K,1.0*K/s) # first guess of line
+        line1 = Line(1.0,0.0) # first guess of line
+        line2 = Line(0.0,1.0) # first guess of line
+
+        # uncertainty of first guess
+        struct LineUncertainty <: AbstractMatrix{Any}
+            intercept::Line
+            slope::Line
+        end 
+        # struct LineUncertainty{T1, T2, L1 <: Line{T1}, L2 <: Line{T2}} <: AbstractMatrix{Any,2}
+        #     intercept::L1
+        #     slope::L2
+        # end 
+        # make proper interface for Matrix
+        Base.Matrix(b::LineUncertainty) = hcat(b.intercept,b.slope)
+        Base.size(b::LineUncertainty) = (2,2)
+        Base.getindex(b::LineUncertainty, inds::Vararg) = getindex(Matrix(b), inds...)
+        Base.getindex(b::LineUncertainty; kw...) = getindex(Matrix(b); kw...)
+
+        LineUncertainty(A::Matrix) = LineUncertainty(Line(A[:,1]),Line(A[:,2]))
+
+        Base.:*(A::LineUncertainty, b::Line ) =  Line(Matrix(A) * vec(b))
+        Base.:*(A::LineUncertainty, B::LineUncertainty) = LineUncertainty(Matrix(A) * Matrix(B))
+        Base.:*(a::Number, b::Line) =  Line(a*b.intercept, a*b.slope)
+        Px0 = LineUncertainty(
+            Line(1.0*K^2,0.0*K^2/s),
+            Line(0.0*K^2/s,1.0*(K/s)^2) )
+
+        x0 = Estimate(line0, Px0)
+        Py⁻¹ = Diagonal(fill(1.0*K^-2,M))
+        y = Estimate(ỹcontaminated, inv(Py⁻¹))
+    
+        # impulse response method
+        obs1(t) = obs(t, line1)
+        obs2(t) = obs(t, line2)
+        E = hcat(obs1.(t),obs2.(t))
+
+        x = E\y # invert the observations to obtain solution
+
+        x2 = combine(x0,y,E) # also inverts the obs and combines with first guess
+        @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
+    end
 end 

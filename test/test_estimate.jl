@@ -70,7 +70,7 @@ end
         slope::T
     end
     Line(a::Vector) = Line(first(a),last(a))
-
+     
     # make proper interface for Vector
     Base.vec(b::Line) = vcat(b.intercept,b.slope)
     Base.size(b::Line) = (2,)
@@ -107,10 +107,6 @@ end
     Base.:*(A::LineUncertainty, b::Line ) =  Line(Matrix(A) * vec(b))
     Base.:*(A::LineUncertainty, B::LineUncertainty) = LineUncertainty(Matrix(A) * Matrix(B))
     Base.:*(a::Number, b::Line) =  Line(a*b.intercept, a*b.slope)
-    # function obs(t, line::LineUncertainty)
-    #     return [obs(t,line.intercept), obs(t,line.slope)]
-    # end  
-
     Px0 = LineUncertainty(line1,line2)
     x0 = Estimate(line0, Px0)
     Py⁻¹ = Diagonal(fill(1.0,M))
@@ -120,14 +116,38 @@ end
     obs1(t) = obs(t, line1)
     obs2(t) = obs(t, line2)
     E = hcat(obs1.(t),obs2.(t))
-    # # ET = LineUncertainty(collect(transpose(E)))
-    
-    # E2 = Line(obs1.(t),obs2.(t))
 
     x = E\y # invert the observations to obtain solution
 
-    combine(x0,y,obs)
+    x2 = combine(x0,y,E) # also inverts the obs and combines with first guess
     @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
+
+    # no-matrix method (incomplete)
+
+        function obs(t::AbstractVector, line::LineUncertainty)
+        out1 = [obs(i,Px0.intercept) for i in eachindex(t)]
+        out2 = [obs(i,Px0.slope) for i in eachindex(t)]
+        # return hcat(obs.(t,line.intercept), obs.(t,line.slope))
+        return Line(out1,out2)
+    end  
+
+    # also need to account for Lines that can be matrices
+    Base.Matrix(A::Line{<:AbstractVector}) = hcat(vec(A.intercept), vec(A.slope))
+    Base.transpose(A::Line{<:AbstractVector}) = vcat(vec(A.intercept), vec(A.slope))
+    function Base.Matrix(A::AbstractVector{<:Line{T}}) where T
+        ncol = length(A)
+        Amat = Array{T,2}(undef,2,ncol) 
+        for i in 1:ncol
+            Amat[:,i] = vec(A[i])
+        end
+    end
+    obs(x0::Line) = obs(t,x0)
+
+    EPx0 = obs(t, Px0)
+    EPx0 isa Line{<:AbstractVector}
+    Matrix(EPx0)
+
+    combine(x0,y,obs)
 end
 
 @testset "left-uniform problem with prior info" begin

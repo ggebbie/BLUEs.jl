@@ -22,7 +22,7 @@ a structure with some vector of values x and associated uncertainty matrix P
 -   `v :: AbstractArray{T, Nv}`
 -   `P :: AbstractArray{T, NP}`
 """
-struct Estimate{Tv <: Number, Ta <: Number, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
+struct Estimate{Tv, Ta, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
     v :: V
     P :: A
 end
@@ -64,7 +64,7 @@ standard_error(P::AbstractArray) = .√diag(P)
 - `val::Vector{Number}`: central value of estimate
 - `P::Matrix{Number}`: estimate uncertainty matrix
 """
-function getproperty(x::Estimate, d::Symbol)
+function getproperty(x::Estimate,d::Symbol)
     if d === :σ
         return standard_error(x.P) # .√diag(x.P)
     elseif d === :x
