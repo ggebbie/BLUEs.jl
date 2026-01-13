@@ -27,6 +27,8 @@ function source_water_solution(surfaceregions, years, statevar)
     return x
 end
 
+include("convolutions.jl")
+
 @testset "dimensional data" begin
 
     MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
