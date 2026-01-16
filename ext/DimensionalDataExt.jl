@@ -9,10 +9,13 @@ using DimensionalData:@dim
 using AlgebraicArrays
 using LinearAlgebra
 
-ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
-if !isnothing(ext)
-    RowVector = ext.RowVector
-end
+# ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysExt)
+# # ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
+# if !isnothing(ext)
+#     RowVector = ext.RowVector
+# end
+
+# @dim RowVector "singular dimension"
 
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)

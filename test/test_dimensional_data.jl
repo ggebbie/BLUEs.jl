@@ -37,6 +37,7 @@ include("convolutions.jl")
     @testset "uniform state vectors" begin
 
         # fixed parameters
+        @dim RowVector "singular dimension"
         @dim YearCE "years Common Era"
         @dim SurfaceRegion "surface location"
         @dim InteriorLocation "interior location"
