@@ -9,14 +9,6 @@ using DimensionalData:@dim
 using AlgebraicArrays
 using LinearAlgebra
 
-# ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysExt)
-# # ext = Base.get_extension(AlgebraicArrays, :AlgebraicArraysDimensionalDataExt)
-# if !isnothing(ext)
-#     RowVector = ext.RowVector
-# end
-
-# @dim RowVector "singular dimension"
-
 function show(io::IO, mime::MIME{Symbol("text/plain")}, x::DimArray{T, 3}) where T <: Number 
     summary(io, x); println(io)
     statevars = x.dims[3]
@@ -44,6 +36,7 @@ function standard_error(P::DimArray)
     end
     return DimArray(sigma,dims(P))
 end
+
 # function standard_error(P::DimArray)
 #     #sigma = similar(parent(P))
 #     sigma = Array{eltype(eltype(P))}(undef,size(P))
