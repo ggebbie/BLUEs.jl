@@ -10,6 +10,13 @@
         for M in Mlist
             a = randn(M)u"K" .± rand(M)u"K"
             a2 = (randn(M).± randn(M))u"K"
+
+            # can haz Estimate?
+            vval = Measurements.value.(a)  
+            verr = Measurements.uncertainty.(a)
+            vest = Estimate(vval, verr) # just provide standard error
+
+            vest2 = Estimate(a)
             error_propagation(a)
         end
     end

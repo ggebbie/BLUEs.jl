@@ -7,7 +7,7 @@ export Estimate, OverdeterminedProblem, UnderdeterminedProblem
 export combine
 export solve, show, cost, datacost, controlcost
 export rmserror, rmscontrol
-export expectedunits, impulseresponse, convolve
+export expectedunits, impulseresponse
 export addcontrol, addcontrol!, flipped_mult
 
 import Base: show, getproperty, propertynames, *, +, -, \, sum
@@ -42,7 +42,6 @@ function Estimate(v::AbstractVector{T}) where T <: Measurement
 end 
 
 include("base.jl")
-# include("unitful.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
@@ -267,8 +266,6 @@ function flipped_mult
     multiply in opposite order given, needs to be defined for impulseresponse
 """
 flipped_mult(a,b) = b*a
-
-function convolve end
 
 response(y::Number,y₀,Δu) = (y - y₀)/Δu
 response(y,y₀,Δu) = vec((y - y₀)/Δu)

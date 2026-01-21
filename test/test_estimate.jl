@@ -122,32 +122,23 @@ end
     x2 = combine(x0,y,E) # also inverts the obs and combines with first guess
     @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
 
-    # no-matrix method (incomplete)
+    # # also need to account for Lines that can be matrices
+    # Base.Matrix(A::Line{<:AbstractVector}) = hcat(vec(A.intercept), vec(A.slope))
+    # Base.transpose(A::Line{<:AbstractVector}) = vcat(vec(A.intercept), vec(A.slope))
+    # function Base.Matrix(A::AbstractVector{<:Line{T}}) where T
+    #     ncol = length(A)
+    #     Amat = Array{T,2}(undef,2,ncol) 
+    #     for i in 1:ncol
+    #         Amat[:,i] = vec(A[i])
+    #     end
+    # end
+    # obs(x0::Line) = obs(t,x0)
 
-        function obs(t::AbstractVector, line::LineUncertainty)
-        out1 = [obs(i,Px0.intercept) for i in eachindex(t)]
-        out2 = [obs(i,Px0.slope) for i in eachindex(t)]
-        # return hcat(obs.(t,line.intercept), obs.(t,line.slope))
-        return Line(out1,out2)
-    end  
+    # EPx0 = obs(t, Px0)
+    # EPx0 isa Line{<:AbstractVector}
+    # Matrix(EPx0)
 
-    # also need to account for Lines that can be matrices
-    Base.Matrix(A::Line{<:AbstractVector}) = hcat(vec(A.intercept), vec(A.slope))
-    Base.transpose(A::Line{<:AbstractVector}) = vcat(vec(A.intercept), vec(A.slope))
-    function Base.Matrix(A::AbstractVector{<:Line{T}}) where T
-        ncol = length(A)
-        Amat = Array{T,2}(undef,2,ncol) 
-        for i in 1:ncol
-            Amat[:,i] = vec(A[i])
-        end
-    end
-    obs(x0::Line) = obs(t,x0)
-
-    EPx0 = obs(t, Px0)
-    EPx0 isa Line{<:AbstractVector}
-    Matrix(EPx0)
-
-    combine(x0,y,obs)
+    # combine(x0,y,obs)
 end
 
 @testset "left-uniform problem with prior info" begin
