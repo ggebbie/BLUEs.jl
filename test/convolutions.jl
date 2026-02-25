@@ -1,3 +1,14 @@
+function firstcol(P::MatrixArray)
+    # number of column dimensions
+    ncoldims = length(last(Px0.dims))
+    nrowdims = length(first(Px0.dims))
+    icol = Tuple(fill(1,ncoldims))
+    irow = Tuple(fill(Colon(), nrowdims))
+    return P[irow,icol]
+end
+
+returncol(P::MatrixDimArray, colno) = VectorArray(DimArray(reshape(P[:,colno],size(rangedims(P))),rangedims(P)))
+
 """
 function convolve(x::DimArray{T},E::AbstractDimArray) where T <: Number
 
@@ -10,6 +21,7 @@ function convolve(x::VectorArray,E::AbstractDimArray)
     tnow = last(first(rangedims(x)))
     lags = first(dims(E))
     vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+    println(vals)
     (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
 end
 
@@ -22,7 +34,7 @@ function convolve(x::VectorArray,M::AbstractDimArray,Tx::Union{Ti,Vector})
     if ndims(M) == 2 
         return VectorArray(DimArray([convolve(x,M,Tx[tt]) for (tt,yy) in enumerate(Tx)],Tx))
     elseif ndims(M) == 3
-
+ 
         # do a sample calculation to get units.
         Msmall = M[:,:,1]
         yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume everything has the same units
@@ -49,17 +61,42 @@ function convolve(P::MatrixArray, M::AbstractDimArray, Tx::Union{Ti,Vector})
     return MatrixArray(DimArray(Pyx,domaindims(P)))
 end
 
-function convolve(P::MatrixArray,M::AbstractDimArray) 
-    #function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+function convolve(P::MatrixDimArray{T},M::AbstractDimArray) where T
     # became more complicated when returning a scalar was not allowed
-    # @dim RowVector "singular dimension"
-    T2 = typeof(first(parent(convolve(first(P),M))))
-    Pyx = Array{T2}(undef,size(P))
-    for i in eachindex(P)
-        Pyx[i] = first(parent(convolve(P[i],M)))
+
+    outputdims = first(rangedims(P))
+    Pyx = Array{T}(undef,length(outputdims),size(P,2))
+    for j in 1:size(P,2)
+        Pyx[:,j] = parent(convolve(returncol(P,j), M))
     end
-    return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
+    println(size(Pyx))
+    println(size(rangedims(P)))
+    println(size(domaindims(P)))
+    arr = reshape(Pyx, length(outputdims), size(domaindims(P))...)
+    da = DimArray(arr, (outputdims, domaindims(P)...))
+    return AlgebraicArray(da, ((length(outputdims),),size(domaindims(P))))
 end
+function convolve(P::MatrixDimArray{T},M::AbstractDimArray) where T
+    # became more complicated when returning a scalar was not allowed
+    Pyx = Array{T}(undef,size(P,2))
+    for j in 1:size(P,2)
+        Pyx[j] = first(convolve(returncol(P,j), M))
+    end
+    arr = reshape(Pyx, size(rangedims(P)))
+    da = DimArray(arr, rangedims(P))
+    return transpose(AlgebraicArray(da, (size(rangedims(P)),)))
+end
+# function convolve(P::MatrixArray,M::AbstractDimArray) 
+#     #function convolve(P::DimArray{T},M) where T<: AbstractDimArray
+#     # became more complicated when returning a scalar was not allowed
+#     # @dim RowVector "singular dimension"
+#     T2 = typeof(first(parent(convolve(first(P),M))))
+#     Pyx = Array{T2}(undef,size(P))
+#     for i in eachindex(P)
+#         Pyx[i] = first(parent(convolve(P[i],M)))
+#     end
+#     return AlgebraicArray(Pyx,RowVector(["1"]),rangedims(P))
+# end
 
 # basically repeats previous function: any way to simplify?
 function convolve(P::MatrixArray,M::AbstractDimArray,coeffs::DimVector)
