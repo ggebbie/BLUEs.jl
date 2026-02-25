@@ -198,7 +198,7 @@ include("convolutions.jl")
             # test pieces of combine
             @test observe(Px0) isa MatrixArray
             @test observe(Px0) isa MatrixDimArray 
-            @test parent(observe(Px0)) isa DimArray # workaround
+            @test parent(observe(Px0)) isa DimArray
             
             x1 = combine(x0, y, observe)
 
