@@ -200,7 +200,7 @@ include("convolutions.jl")
             @test observe(Px0) isa MatrixDimArray 
             @test parent(observe(Px0)) isa DimArray # workaround
             
-            x1 = combine(x0,y,observe)
+            x1 = combine(x0, y, observe)
 
             # check whether obs are reproduced
             ytilde = observe(x1.v)
