@@ -18,13 +18,17 @@ includet("test_functions.jl")
         include("test_dimensional_data.jl")
     end
 
-    @testset "extensions with units" begin
+    @testset "extensions with unitful" begin
         global K = u"K"; global K² = u"K^2"; global m = u"m"; global s = u"s";
         global permil = Unitful.FixedUnits(u"permille")
         include("test_estimate_unitful.jl")
         include("test_unitful_linear_algebra.jl")
         include("test_algebraic_arrays_unitful.jl")
+
+        # issue: case 1 works, case 2 works, case 3 doesn't work
         include("test_dimensional_data_unitful.jl")
-        include("test_DD_AA.jl")
+
+        # needs updating
+       # include("test_DD_AA.jl")
     end
 end

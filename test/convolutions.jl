@@ -21,7 +21,34 @@ function convolve(x::VectorArray,E::AbstractDimArray)
     tnow = last(first(rangedims(x)))
     lags = first(dims(E))
     vals = sum([E[ii,:] ⋅ x[Near(tnow-ll),:] for (ii,ll) in enumerate(lags)])
+    println("tnow ",tnow)
+    println("lags ",lags)
+    println("vals ", vals)
+    println(" vals isa Number ",vals isa Number)
+    println("first(rangedims(x)) ",first(rangedims(x)))
+
+    # (tnow isa Number) ? (tdim = Ti([tnow])) : (tdim = Ti(tnow))
+        # (vals isa Number) ? (return VectorArray(DimArray([vals], tdim))) :
+    # (return VectorArray(AlgebraicArray(vals, tdim)))
+
+    # works with all previous cases, but not DD timeseries
     (vals isa Number) ? (return VectorArray(DimArray([vals],first(rangedims(x))))) : (return VectorArray(AlgebraicArray(vals,first(rangedims(x)))))
+
+    # Tdims = Ti((ustrip(tnow):ustrip(tnow))yr)
+    # if tnow isa Number
+    #     Tdims = Ti([tnow])
+    # else
+    #     Tdims = Ti(tnow)
+    # end
+
+    # if vals isa Number
+    #     da = DimArray([vals],Tdims)
+    #     println(da)
+    #     return VectorArray(da)
+    # else
+    #     # return VectorArray(AlgebraicArray(vals,first(rangedims(x))))
+    #     return VectorArray(AlgebraicArray(vals,Tdims))
+    # end
 end
 
 function convolve(x::VectorArray, M::AbstractDimArray, t::Number)
@@ -36,13 +63,10 @@ function convolve(x::VectorArray, M::AbstractDimArray, Tx::Union{Ti,Vector})
          # do a sample calculation to get units.
         Msmall = M[:,:,1]
         yunit = unit.(vec(convolve(x,Msmall,Tx))[1]) # assume everything has the same units
-
         y = DimArray(zeros(length(Tx),last(size(M)))yunit,(Tx,last(dims(M))))
         for (ii,vv) in enumerate(last(dims(M)))
-            
             Msmall = M[:,:,ii]
             y[:,ii] = convolve(x,Msmall,Tx)
-
         end
         return y
     else
@@ -80,7 +104,7 @@ function convolve(x::VectorArray, M::AbstractDimArray, coeffs::DimVector)
 end
 
 # basically repeats previous function: any way to simplify?
-function convolve(P::MatrixDimArray{T}, M::AbstractDimArray, coeffs::DimVector)
+function convolve(P::MatrixDimArray{T}, M::AbstractDimArray, coeffs::DimVector) where T
     # T2 = typeof(first(parent(convolve(first(P),M,coeffs)))
     outputdims = first(rangedims(P))
     Pyx = Array{T}(undef,length(outputdims),size(P,2))
@@ -104,7 +128,8 @@ function convolve(x::VectorDimArray, M::AbstractDimArray, Tx::Ti, coeffs::DimVec
     end
 end
 # basically repeats previous function: any way to simplify?
-function convolve(P::MatrixDimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) 
+function convolve(P::MatrixDimArray{T}, M::AbstractDimArray, Tx::Ti, coeffs::DimVector) where T
+    
     # T2 = typeof(parent(convolve(first(P),M,Tx,coeffs)))
     outputdims = first(rangedims(P))
     Pyx = Array{T}(undef,length(outputdims),size(P,2))
@@ -128,12 +153,4 @@ function convolve(x::VectorArray, M::AbstractDimArray, t::Number, coeffs::DimVec
     statevars = dims(x,3)
     return sum([convolve(x[:,:,At(s)], M, t)  * coeffs[At(s)] for s in statevars])
 end
-
-
-
-
-
-
-
-
 

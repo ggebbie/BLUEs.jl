@@ -27,16 +27,15 @@ function source_water_solution(surfaceregions, years, statevar)
     return x
 end
 
+MatrixDimArray = MatrixArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+VectorDimArray = VectorArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+AlgebraicDimArray = AlgebraicArray{T, D, N, A} where {T, D, N, A<:AbstractDimArray{T, N}}
+
 include("convolutions.jl")
 
 @testset "dimensional data" begin
-
     # MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
     # VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
-
-    MatrixDimArray = MatrixArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
-    VectorDimArray = VectorArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
-    AlgebraicDimArray = AlgebraicArray{T, D, N, A} where {T, D, N, A<:AbstractDimArray{T, N}}
 
     @testset "uniform state vectors" begin
 
@@ -110,18 +109,18 @@ include("convolutions.jl")
         @test parent(observe(Px0)) isa DimArray
 
         # try running everything by hand
-        y1 = y
-        E1 = observe
-        Pyx = E1(x0.P) 
-        Pxy = transpose(Pyx)
-        EPxy = E1(Pxy)
-        Py = EPxy + y1.P
-        y0 = E1(x0.v)
-        n1 = y1.v - y0
-        tmp = Py \ n1
-        v = Pxy * tmp
-        dP = Pxy * (Py \ Pyx)
-        P = x0.P - dP
+        # y1 = y
+        # E1 = observe
+        # Pyx = E1(x0.P) 
+        # Pxy = transpose(Pyx)
+        # EPxy = E1(Pxy)
+        # Py = EPxy + y1.P
+        # y0 = E1(x0.v)
+        # n1 = y1.v - y0
+        # tmp = Py \ n1
+        # v = Pxy * tmp
+        # dP = Pxy * (Py \ Pyx)
+        # P = x0.P - dP
 
         x1 = combine(x0,y,observe)
 
