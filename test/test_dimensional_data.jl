@@ -27,12 +27,15 @@ function source_water_solution(surfaceregions, years, statevar)
     return x
 end
 
+MatrixDimArray = MatrixArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+VectorDimArray = VectorArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+AlgebraicDimArray = AlgebraicArray{T, D, N, A} where {T, D, N, A<:AbstractDimArray{T, N}}
+
 include("convolutions.jl")
 
 @testset "dimensional data" begin
-
-    MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
-    VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
+    # MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
+    # VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
 
     @testset "uniform state vectors" begin
 
@@ -57,47 +60,74 @@ include("convolutions.jl")
         cases = ((false,false,false),(true,false,false),(true,true,true))
 
         # for interactive use, 1 test fails if all cases are run, is this intended?
-         (statevars,timeseries,lag) = cases[1]
+        (statevars,timeseries,lag) = cases[1]
         #for (statevars,timeseries,lag) in cases
-            println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
+        println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
-            #define constants
-            lag ? nτ = 5 : nτ = 1
-            lags = (0:(nτ-1))
-            σn = 0.01
-            σₓ = 10.0
+        #define constants
+        lag ? nτ = 5 : nτ = 1
+        lags = (0:(nτ-1))
+        σn = 0.01
+        σₓ = 10.0
 
-            # take all years or just the end year
-            timeseries ? yrs = years : yrs = [years[end]]
-            M = source_water_matrix_with_lag(surfaceregions,lags)
+        # take all years or just the end year
+        timeseries ? yrs = years : yrs = [years[end]]
+        M = source_water_matrix_with_lag(surfaceregions,lags)
 
-            # Step 1: get synthetic solution
-            x = source_water_solution(surfaceregions,yrs)
-            d = VectorArray(fill(σₓ,dims(x)))
-            x₀ = 0.0 * x #zeros(dims(x),:VectorArray) .* unit.(x)
-            x0 = Estimate( x₀, d)
+        # Step 1: get synthetic solution
+        x = source_water_solution(surfaceregions,yrs)
+        d = VectorArray(fill(σₓ,dims(x)))
+        # d = VectorArray(fill(σₓ,dims(x))) 
+        @test d == fill(σₓ,dims(x),(size(dims(x)),))
+        
+        x₀ = fill(0.0,dims(x),(size(dims(x)),))
+        @test x₀ == 0.0 * x 
+
+        # broadcasting currently not working for squaring, can we make the Uncertainty matrix by hand?        
+        newdim = AlgebraicArrays.unwrap((dims(x),dims(x)))
+        arr = reshape( Diagonal(vec(d.^2)), size(newdim))
+        da = DimArray(arr, newdim)
+        Pmanual = AlgebraicArray(da, (size(dims(x)), size(dims(x))))
+        x0test = Estimate(x₀, Pmanual)
+        @test x0test isa Estimate
+        
+        x0 = Estimate( x₀, d)
                     
-            global observe(x) = convolve(x,M)
+        global observe(x) = convolve(x,M)
+        # Given, M and x. Make synthetic data for observations.
+        println("Synthetic data")
+        ytrue = observe(x)
+        ny = length(ytrue)
+        d  = VectorArray(fill(σn, rangedims(ytrue)))
+        y = Estimate( ytrue, d)
 
-            # Given, M and x. Make synthetic data for observations.
-            println("Synthetic data")
-            ytrue = observe(x)
-            ny = length(ytrue)
-            d  = VectorArray(fill(σn, rangedims(ytrue)))
-            y = Estimate( ytrue, d)
+        Px0 = x0.P
 
-            Px0 = x0.P
-            # test pieces of combine
-            @test observe(Px0) isa MatrixArray
-            @test observe(Px0) isa MatrixDimArray 
-            @test parent(observe(Px0)) isa DimArray # workaround
-            
-            x1 = combine(x0,y,observe)
+        # test pieces of combine
+        @test observe(Px0) isa MatrixArray
+        @test observe(Px0) isa MatrixDimArray 
+        @test parent(observe(Px0)) isa DimArray
 
-            # check whether obs are reproduced
-            ytilde = observe(x1.v)
-            @test isapprox(y.v,ytilde,rtol= 1e-2) 
-        end
+        # try running everything by hand
+        # y1 = y
+        # E1 = observe
+        # Pyx = E1(x0.P) 
+        # Pxy = transpose(Pyx)
+        # EPxy = E1(Pxy)
+        # Py = EPxy + y1.P
+        # y0 = E1(x0.v)
+        # n1 = y1.v - y0
+        # tmp = Py \ n1
+        # v = Pxy * tmp
+        # dP = Pxy * (Py \ Pyx)
+        # P = x0.P - dP
+
+        x1 = combine(x0,y,observe)
+
+        # check whether obs are reproduced
+        ytilde = observe(x1.v)
+        @test isapprox(y.v,ytilde,rtol= 1e-2) 
+    end
     #end 
 
     # consider adding following experiments
@@ -167,9 +197,9 @@ include("convolutions.jl")
             # test pieces of combine
             @test observe(Px0) isa MatrixArray
             @test observe(Px0) isa MatrixDimArray 
-            @test parent(observe(Px0)) isa DimArray # workaround
+            @test parent(observe(Px0)) isa DimArray
             
-            x1 = combine(x0,y,observe)
+            x1 = combine(x0, y, observe)
 
             # check whether obs are reproduced
             ytilde = observe(x1.v)
