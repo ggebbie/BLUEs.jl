@@ -101,30 +101,53 @@ end
     Base.size(b::LineUncertainty) = (2,2)
     Base.getindex(b::LineUncertainty, inds::Vararg) = getindex(Matrix(b), inds...)
     Base.getindex(b::LineUncertainty; kw...) = getindex(Matrix(b); kw...)
+    Base.transpose(A::Line{<:AbstractVector}) = vcat(vec(A.intercept), vec(A.slope))
 
     LineUncertainty(A::Matrix) = LineUncertainty(Line(A[:,1]),Line(A[:,2]))
 
     Base.:*(A::LineUncertainty, b::Line ) =  Line(Matrix(A) * vec(b))
     Base.:*(A::LineUncertainty, B::LineUncertainty) = LineUncertainty(Matrix(A) * Matrix(B))
     Base.:*(a::Number, b::Line) =  Line(a*b.intercept, a*b.slope)
+
+    function obs(t, P::LineUncertainty)
+        return Line( obs(t, P.intercept), obs(t, P.slope))
+    end  
+
     Px0 = LineUncertainty(line1,line2)
     x0 = Estimate(line0, Px0)
     Py⁻¹ = Diagonal(fill(1.0,M))
     y = Estimate(ỹcontaminated, inv(Py⁻¹))
     
-    # impulse response method
+    # impulse response method     #####
     obs1(t) = obs(t, line1)
     obs2(t) = obs(t, line2)
     E = hcat(obs1.(t),obs2.(t))
 
+    # fine but x is not a `Line`
     x = E\y # invert the observations to obtain solution
 
     x2 = combine(x0,y,E) # also inverts the obs and combines with first guess
     @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
+    
+    ######### try to `combine` with correct structs
 
+    obs_generic(t::Vector,x) = obs.(t, x)
+    obsP.(t)
+Et(x) = obs.(t, x)    
+    Pyx = E1(x0.P) 
+    Pxy = transpose(Pyx)
+    EPxy = E1(Pxy)
+    Py = EPxy + y1.P
+    y0 = E1(x0.v)
+    n1 = y1.v - y0
+    tmp = Py \ n1
+    v = Pxy * tmp
+    dP = Pxy * (Py \ Pyx)
+    P = x0.P - dP
+    Estimate(v,P)
+    
     # # also need to account for Lines that can be matrices
     # Base.Matrix(A::Line{<:AbstractVector}) = hcat(vec(A.intercept), vec(A.slope))
-    # Base.transpose(A::Line{<:AbstractVector}) = vcat(vec(A.intercept), vec(A.slope))
     # function Base.Matrix(A::AbstractVector{<:Line{T}}) where T
     #     ncol = length(A)
     #     Amat = Array{T,2}(undef,2,ncol) 
@@ -139,6 +162,8 @@ end
     # Matrix(EPx0)
 
     # combine(x0,y,obs)
+
+    
 end
 
 @testset "left-uniform problem with prior info" begin
