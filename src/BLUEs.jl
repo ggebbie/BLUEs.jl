@@ -25,6 +25,16 @@ a structure with some vector of values x and associated uncertainty matrix P
 struct Estimate{Tv, Ta, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
     v :: V
     P :: A
+
+    # impose relation between vector and Matrix types
+    # function Estimate(v::V,P::A)  where V <: AbstractArray{Tv,1} where A <: AbstractArray{Ta,2} where {Tv, Ta}
+    #     if eltype(zero(Tv)^2) == Ta
+    #         new{Tv, Ta, V, A}(v, P)
+    #     else
+    #         error("Element types for Estimate not consistent")
+    #     end
+    # end
+    
 end
 
 # if two vectors are provided, assume it is the standard error 

@@ -3,6 +3,7 @@ using BLUEs
 using Test
 using LinearAlgebra
 using Statistics
+using Unitful
 
 includet("test_functions.jl")
 
