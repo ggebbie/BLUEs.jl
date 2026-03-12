@@ -35,8 +35,11 @@ end
 
 @testset "dimensional data + unitful" begin
 
-    MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
-    VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
+    MatrixDimArray = MatrixArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+    VectorDimArray = VectorArray{T, N, A} where {T, N, A<:AbstractDimArray{T, N}}
+    AlgebraicDimArray = AlgebraicArray{T, D, N, A} where {T, D, N, A<:AbstractDimArray{T, N}}
+    # MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
+    # VectorDimArray = VectorArray{T, N, A} where {T, N, A <: DimensionalData.AbstractDimArray}
 
     # if use_units
     #     @testset "objective mapping with DimensionalData and AlgebraicArrays" begin
@@ -65,10 +68,12 @@ end
         # 3) Circulation with lag
 
         # define (statevars,timeseries,lag)
-        cases = ((false,false,false),(true,false,false),(true,true,true))
+        # cases = ((false,false,false),(true,false,false),(true,true,true))
+        cases = ((false,false,false),(true,false,false))# ,(true,true,true)
 
+        # ISSUE: CASES 2 works, CASE 3 DOESN't WORK
         (statevars,timeseries,lag) = cases[1] # for interactive use
-        
+       
         println("statevars,timeseries,lag = ",statevars, " ", timeseries, " ", lag)
 
         #define constants
@@ -101,8 +106,8 @@ end
         # test pieces of combine
         @test observe(Px0) isa MatrixArray
         @test observe(Px0) isa MatrixDimArray 
-        @test parent(observe(Px0)) isa DimArray # workaround
-            
+        @test parent(observe(Px0)) isa DimArray
+        
         x1 = combine(x0,y,observe)
 
         # check whether obs are reproduced

@@ -39,9 +39,13 @@ function func_algebraic_arrays(a)
     ## with units, doesn't construct 10-31
     x = Estimate(a)
     N = size(a)
-    
+
     aval = VectorArray(Measurements.value.(a))
     aerr = VectorArray(Measurements.uncertainty.(a))
+
+    # full format
+    # aval = AlgebraicArray(Measurements.value.(a), (size(a),))
+    # aerr = AlgebraicArray(Measurements.uncertainty.(a), (size(a),))
     x1 = Estimate(aval,aerr)
     x2 = Estimate(aval, Diagonal(aerr.^2))
 
@@ -52,7 +56,7 @@ function func_algebraic_arrays(a)
  
     M = (1,4) # grid of estimated values
     # force E to be a Matrix
-    E = randn(M, N, :MatrixArray)
+    E = randn((M, N))
  
     # need to define vector times vector
     # or force E to be a matrix

@@ -2,6 +2,7 @@
 AlgebraicArrays = "8af735f6-f3e5-4048-bdaa-40a2355e9eea"
 BLUEs = "b3a7f272-e305-45d1-bcf3-14d22bb67726"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
@@ -13,5 +14,5 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [sources]
-AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl.git"}
 BLUEs = {path = ".."}
+AlgebraicArrays = {rev = "rm-nesting", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}

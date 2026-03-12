@@ -22,9 +22,19 @@ a structure with some vector of values x and associated uncertainty matrix P
 -   `v :: AbstractArray{T, Nv}`
 -   `P :: AbstractArray{T, NP}`
 """
-struct Estimate{Tv <: Number, Ta <: Number, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
+struct Estimate{Tv, Ta, V <: AbstractArray{Tv,1}, A <: AbstractArray{Ta,2}} 
     v :: V
     P :: A
+
+    # impose relation between vector and Matrix types
+    # function Estimate(v::V,P::A)  where V <: AbstractArray{Tv,1} where A <: AbstractArray{Ta,2} where {Tv, Ta}
+    #     if eltype(zero(Tv)^2) == Ta
+    #         new{Tv, Ta, V, A}(v, P)
+    #     else
+    #         error("Element types for Estimate not consistent")
+    #     end
+    # end
+    
 end
 
 # if two vectors are provided, assume it is the standard error 
@@ -42,7 +52,6 @@ function Estimate(v::AbstractVector{T}) where T <: Measurement
 end 
 
 include("base.jl")
-# include("unitful.jl")
 include("overdetermined_problem.jl")
 include("underdetermined_problem.jl")
 include("named_tuple.jl")
@@ -64,7 +73,7 @@ standard_error(P::AbstractArray) = .√diag(P)
 - `val::Vector{Number}`: central value of estimate
 - `P::Matrix{Number}`: estimate uncertainty matrix
 """
-function getproperty(x::Estimate, d::Symbol)
+function getproperty(x::Estimate,d::Symbol)
     if d === :σ
         return standard_error(x.P) # .√diag(x.P)
     elseif d === :x
@@ -267,8 +276,6 @@ function flipped_mult
     multiply in opposite order given, needs to be defined for impulseresponse
 """
 flipped_mult(a,b) = b*a
-
-# function convolve end
 
 response(y::Number,y₀,Δu) = (y - y₀)/Δu
 response(y,y₀,Δu) = vec((y - y₀)/Δu)
