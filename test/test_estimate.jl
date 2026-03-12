@@ -84,10 +84,10 @@ end
         val::Vector{T}
     end
 
-    vec(y::LineObs) = y.val
-    size(y::LineObs) = (length(y.time),) 
-    getindex(y::LineObs, inds) = getindex(y.val,inds...)
-    function Matrix(A::LineObs{Line{T}}) where T
+    Base.vec(y::LineObs) = y.val
+    Base.size(y::LineObs) = (length(y.time),) 
+    Base.getindex(y::LineObs, inds) = getindex(y.val,inds...)
+    function Base.Matrix(A::LineObs{Line{T}}) where T
         B = Array{T,2}(undef, 2, length(A.val))
         for j in 1:length(A.val)
             B[:,j] = vec(A.val[j])
@@ -95,7 +95,7 @@ end
         return B
     end
 
-    function Matrix(A::Line{LineObs{T}}) where T
+    function Base.Matrix(A::Line{LineObs{T}}) where T
         B = Array{T,2}(undef, length(A.intercept), 2)
         for i in 1:length(A.intercept)
             B[i,1] = A.intercept[i]
@@ -152,7 +152,6 @@ end
         return LineObs(A.intercept.time, lines)
     end
     LineUncertainty(A::Matrix) = LineUncertainty(Line(A[:,1]),Line(A[:,2]))
-
     
     Base.:*(A::LineObs{<:Line}, B::Line{<:LineObs}) = LineUncertainty( Base.:*(Matrix(A), Matrix(B)))
 
@@ -200,8 +199,8 @@ end
     end
     Base.getindex(A::LineObsUncertainty, inds::Vararg) = (A.val[last(inds)]).val[first(inds)]
 
-    size(A::LineObsUncertainty) = (length(A.time), length(A.time))
-    Matrix(A::LineObsUncertainty) = Array(reshape(vec(A), size(A)))
+    Base.size(A::LineObsUncertainty) = (length(A.time), length(A.time))
+    Base.Matrix(A::LineObsUncertainty) = Array(reshape(vec(A), size(A)))
     function Base.:+(a::LineObsUncertainty, b::LineObsUncertainty)
         (a.time != b.time) && error("not at same time")
         return LineObsUncertainty(a.time, a.val .+ b.val)
@@ -223,12 +222,15 @@ end
     obs2(t) = obs(t, line2)
     E = hcat(obs1(t), obs2(t))
 
-    # fine but x is not a `Line`
-    x = E\y # invert the observations to obtain solution
+    x = E\y # invert the observations to obtain solution, this keeps right types
 
-    x2 = combine(x0,y,E) # also inverts the obs and combines with first guess
+    # switch to purely linear algebra (no checks)
+    x0la = Estimate(vec(x0.v), Matrix(x0.P))
+
+      yla = Estimate(vec(y.v), Matrix(y.P))
+    xla = combine(x0la,yla,E) # also inverts the obs and combines with first guess
     
-    @test all((x.v .- 4x.σ) .< [a,b] .< (x.v .+ 4x.σ))
+    @test all((xla.v .- 4xla.σ) .< [a,b] .< (xla.v .+ 4xla.σ))
     
     ######### try to `combine` with correct structs
 
@@ -251,25 +253,17 @@ end
     # dP = Pxy * (Py \ Pyx)
     P = x0.P - dP
     x̃ =  Estimate(v,P)
-    
-    # # also need to account for Lines that can be matrices
-    # Base.Matrix(A::Line{<:AbstractVector}) = hcat(vec(A.intercept), vec(A.slope))
-    # function Base.Matrix(A::AbstractVector{<:Line{T}}) where T
-    #     ncol = length(A)
-    #     Amat = Array{T,2}(undef,2,ncol) 
-    #     for i in 1:ncol
-    #         Amat[:,i] = vec(A[i])
-    #     end
-    # end
-    # obs(x0::Line) = obs(t,x0)
 
-    # EPx0 = obs(t, Px0)
-    # EPx0 isa Line{<:AbstractVector}
-    # Matrix(EPx0)
+    @test isapprox( xla.v, x̃.v)
+    @test isapprox( xla.P, x̃.P)
 
-    # combine(x0,y,obs)
+    # # wishful thinking
+    # x_default = combine(x0,y,obs)
+    # x_nocheck = combine(x0,y,E,check=false)
+    # x_check = combine(x0,y,E,check=true)    
+    # @test isapprox( x_check.v, x_nocheck.v)
+    # @test isapprox( x_check.P, x_nocheck.P)
 
-    
 end
 
 @testset "left-uniform problem with prior info" begin
