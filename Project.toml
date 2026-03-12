@@ -21,7 +21,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulLinearAlgebra = "c14bd059-d406-4571-8f61-9bd20e53c30b"
 
 [sources]
-AlgebraicArrays = {rev = "main", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
+AlgebraicArrays = {rev = "rm-nesting", url = "https://github.com/ggebbie/AlgebraicArrays.jl"}
 
 [extensions]
 AA_DD_ULA_Ext = ["UnitfulLinearAlgebra", "DimensionalData", "AlgebraicArrays"]
