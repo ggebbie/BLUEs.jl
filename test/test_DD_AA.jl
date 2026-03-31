@@ -2,6 +2,8 @@ using DimensionalData
 using DimensionalData:@dim
 using AlgebraicArrays
 
+include("convolutions_ULA.jl")
+
 @testset "dimensional data + algebraic arrays" begin
 
     MatrixDimArray = MatrixArray{T, M, N, R} where {M, T, N, R<:AbstractDimArray{T, M}}
