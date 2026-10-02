@@ -53,7 +53,7 @@ z = combine(x, y)
 
 ## Examples
 
-Three objective mapping notebooks now exist in the notebooks branch.
+Three objective mapping notebooks serve as recommended examples.
 
 - `2.9_objectivemapping.jl` - pedagogical example from Dynamical Insights From Data class
 
